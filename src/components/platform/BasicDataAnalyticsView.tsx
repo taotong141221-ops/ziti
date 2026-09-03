@@ -11,7 +11,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Activity,
-  Truck,
   CheckCircle2,
   DollarSign,
   Filter,
@@ -21,7 +20,6 @@ import {
   ShoppingCart,
   CheckCircle,
   QrCode,
-  Bike,
   Timer,
   MapPin,
 } from 'lucide-react';
@@ -70,7 +68,7 @@ export const BasicDataAnalyticsView: React.FC<BasicDataAnalyticsViewProps> = ({
   const [startDate, setStartDate] = useState<string>('2026-08-01');
   const [endDate, setEndDate] = useState<string>('2026-08-31');
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'gmv' | 'volume' | 'ratio'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'gmv' | 'volume'>('all');
 
   // Calculations
   const paidOrders = orders.filter((o) => o.payStatus === 1);
@@ -84,38 +82,31 @@ export const BasicDataAnalyticsView: React.FC<BasicDataAnalyticsViewProps> = ({
   const todayGmv = 3120.0;
   const todayRefundAmount = 49.9;
 
-  const totalOrderCount = orders.length;
-  const deliveringCount = orders.filter(
-    (o) => o.orderStatus === 'delivering' || o.orderStatus === 'picking' || o.orderStatus === 'ready_pickup'
-  ).length;
-  const finishedCount = orders.filter((o) => o.orderStatus === 'finished').length;
-  const finishRate = totalOrderCount > 0 ? ((finishedCount / totalOrderCount) * 100).toFixed(1) : '98.2';
+  const totalOrderCount = orders.length || 356;
+  const verifiedCount =
+    orders.filter((o) => o.orderStatus === 'finished' || o.fulfillment?.verifyTime).length || 350;
+  const pendingPickupCount =
+    orders.filter(
+      (o) =>
+        o.orderStatus === 'ready_pickup' ||
+        o.orderStatus === 'picking' ||
+        (o.payStatus === 1 && o.orderStatus !== 'finished' && o.orderStatus !== 'refunded')
+    ).length || 6;
+  const finishRate = totalOrderCount > 0 ? ((verifiedCount / totalOrderCount) * 100).toFixed(1) : '98.3';
 
-  const pickupOrders = paidOrders.filter((o) => o.fulfillType === 'pickup');
-  const deliveryOrders = paidOrders.filter((o) => o.fulfillType === 'delivery');
-  const pickupCount = pickupOrders.length;
-  const deliveryCount = deliveryOrders.length;
-  const totalFulfill = pickupCount + deliveryCount || 1;
-  const pickupPct = Math.round((pickupCount / totalFulfill) * 100);
-  const deliveryPct = 100 - pickupPct;
-
-  const pickupGmv = pickupOrders.reduce((sum, o) => sum + o.payAmount, 0);
-  const deliveryGmv = deliveryOrders.reduce((sum, o) => sum + o.payAmount, 0);
-
-  // 7-day trend data
+  // 7-day trend data (到店自提与核销趋势)
   const trendData = [
-    { day: '08-22', gmv: 1280.5, orders: 32, pickup: 18, delivery: 14 },
-    { day: '08-23', gmv: 1560.0, orders: 38, pickup: 22, delivery: 16 },
-    { day: '08-24', gmv: 1890.2, orders: 45, pickup: 25, delivery: 20 },
-    { day: '08-25', gmv: 2100.8, orders: 50, pickup: 29, delivery: 21 },
-    { day: '08-26', gmv: 2450.0, orders: 58, pickup: 33, delivery: 25 },
-    { day: '08-27', gmv: 2890.6, orders: 66, pickup: 38, delivery: 28 },
+    { day: '08-22', gmv: 1280.5, orders: 32, verified: 31 },
+    { day: '08-23', gmv: 1560.0, orders: 38, verified: 37 },
+    { day: '08-24', gmv: 1890.2, orders: 45, verified: 44 },
+    { day: '08-25', gmv: 2100.8, orders: 50, verified: 49 },
+    { day: '08-26', gmv: 2450.0, orders: 58, verified: 57 },
+    { day: '08-27', gmv: 2890.6, orders: 66, verified: 65 },
     {
       day: '08-28 (今日)',
       gmv: todayGmv,
       orders: paidOrders.length + 42,
-      pickup: Math.round((paidOrders.length + 42) * 0.58),
-      delivery: Math.round((paidOrders.length + 42) * 0.42),
+      verified: Math.round((paidOrders.length + 42) * 0.98),
     },
   ];
 
@@ -127,31 +118,30 @@ export const BasicDataAnalyticsView: React.FC<BasicDataAnalyticsViewProps> = ({
     { hour: '06:00', count: 4, label: '早市晨运' },
     { hour: '08:00', count: 18, label: '早餐/早市高峰' },
     { hour: '10:00', count: 26, label: '生鲜备菜高峰' },
-    { hour: '12:00', count: 32, label: '午间餐饮配送高峰' },
+    { hour: '12:00', count: 32, label: '午间到店提货高峰' },
     { hour: '14:00', count: 12, label: '午后平稳' },
     { hour: '16:00', count: 22, label: '下午茶/晚市前' },
-    { hour: '18:00', count: 42, label: '下班自提/急送大高峰' },
-    { hour: '20:00', count: 28, label: '夜间商超补货' },
-    { hour: '22:00', count: 8, label: '深夜即时送' },
+    { hour: '18:00', count: 42, label: '下班自提核销大高峰' },
+    { hour: '20:00', count: 28, label: '夜间商超补货自提' },
+    { hour: '22:00', count: 8, label: '深夜便利自提' },
   ];
   const maxHourly = Math.max(...hourlyData.map((h) => h.count));
 
-  // Merchant Performance
+  // Merchant Performance (自提履约与核销效率)
   const merchantStats = merchants.map((m, idx) => {
     const mId = m.id || m.merchantId || `merchant-${idx}`;
     const mOrders = paidOrders.filter((o) => o.merchantId === mId);
     const mGmv = mOrders.reduce((sum, o) => sum + o.payAmount, 0) || (idx === 0 ? 1680.5 : idx === 1 ? 1240.2 : 680.0);
     const mCount = mOrders.length || (idx === 0 ? 28 : idx === 1 ? 22 : 12);
-    const mPickup = Math.round(mCount * (idx === 0 ? 0.65 : idx === 1 ? 0.5 : 0.35));
-    const mDelivery = mCount - mPickup;
+    const mVerified = Math.round(mCount * (idx === 0 ? 0.99 : idx === 1 ? 0.98 : 0.96));
     return {
       ...m,
       id: mId,
       gmv: mGmv,
       count: mCount,
-      pickupCount: mPickup,
-      deliveryCount: mDelivery,
-      pickupRate: Math.round((mPickup / mCount) * 100),
+      verifiedCount: mVerified,
+      verifyRate: Math.round((mVerified / mCount) * 100) || 98,
+      avgPickupMinutes: idx === 0 ? 16.5 : idx === 1 ? 18.2 : 21.0,
     };
   });
 
@@ -184,14 +174,6 @@ export const BasicDataAnalyticsView: React.FC<BasicDataAnalyticsViewProps> = ({
             }`}
           >
             订单量分析
-          </button>
-          <button
-            onClick={() => setActiveTab('ratio')}
-            className={`px-3.5 py-1.5 rounded-lg transition cursor-pointer ${
-              activeTab === 'ratio' ? 'bg-white text-emerald-700 shadow-xs font-black' : 'hover:text-slate-900'
-            }`}
-          >
-            自提/配送占比
           </button>
         </div>
 
@@ -477,176 +459,135 @@ export const BasicDataAnalyticsView: React.FC<BasicDataAnalyticsViewProps> = ({
             <span className="text-xs text-slate-500">单位：单</span>
           </div>
 
-          {/* Volume Metric Cards - Part 1: 基础前置数据 */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-            {/* 1. 自提订单数 */}
-            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100">
-              <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
-                <div className="flex items-center">
-                  <span>自提订单数</span>
-                  <FormulaTooltip
-                    title="自提订单数"
-                    formula="自提订单数 = 用户下单结算时选择「到店自提」配送方式的订单数"
-                    example="自提模式下单量 = 208单 (占比 58.4%)"
-                    note="【数据源】：订单表中配送类型 deliveryType = 'self_pickup' 的有效订单总数。"
-                  />
+          {/* Volume Metric Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+            {/* 1. 订单量 */}
+            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100 flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
+                  <div className="flex items-center">
+                    <span>订单量</span>
+                    <FormulaTooltip
+                      title="订单量"
+                      formula="订单量 = 平台全网支付成功的到店自提有效订单总数"
+                      example="自提下单总量 = 356单 (100% 到店自提)"
+                      note="【数据源】：订单表中 payStatus = 1 的有效自提订单总数。"
+                    />
+                  </div>
+                  <span className="p-1 bg-sky-100 text-sky-700 rounded-md">
+                    <ShoppingCart className="w-3.5 h-3.5" />
+                  </span>
                 </div>
-                <span className="p-1 bg-teal-100 text-teal-700 rounded-md">
-                  <Store className="w-3.5 h-3.5" />
-                </span>
-              </div>
-              <div className="mt-2 text-2xl font-black text-slate-900 tracking-tight">
-                208 <span className="text-sm font-normal text-slate-500">单</span>
+                <div className="mt-2 text-2xl font-black text-slate-900 tracking-tight">
+                  356 <span className="text-sm font-normal text-slate-500">单</span>
+                </div>
               </div>
               <div className="mt-1 text-[11px] text-slate-500">
-                到店自提模式 (58.4%)
+                到店自提模式 (100%)
               </div>
             </div>
 
-            {/* 2. 配送订单总数 */}
-            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100">
-              <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
-                <div className="flex items-center">
-                  <span>配送订单总数</span>
-                  <FormulaTooltip
-                    title="配送订单总数"
-                    formula="配送订单总数 = 用户下单结算时选择「同城急送」配送方式的订单数"
-                    example="同城急送下单量 = 148单 (占比 41.6%)"
-                    note="【数据源】：订单表中配送类型 deliveryType = 'express' 的有效订单总数。"
-                  />
+            {/* 2. 已核销数量 */}
+            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100 flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
+                  <div className="flex items-center">
+                    <span>已核销数量</span>
+                    <FormulaTooltip
+                      title="已核销数量"
+                      formula="已核销数量 = 顾客到店出示提货码，门店完成扫码核销的订单数"
+                      example="凭提货码核销完成 = 350单 (占比 98.3%)"
+                      note="【数据源】：自提订单完成核销 verifyTime 记录。"
+                    />
+                  </div>
+                  <span className="p-1 bg-emerald-100 text-emerald-700 rounded-md">
+                    <QrCode className="w-3.5 h-3.5" />
+                  </span>
                 </div>
-                <span className="p-1 bg-purple-100 text-purple-700 rounded-md">
-                  <Truck className="w-3.5 h-3.5" />
-                </span>
-              </div>
-              <div className="mt-2 text-2xl font-black text-slate-900 tracking-tight">
-                148 <span className="text-sm font-normal text-slate-500">单</span>
-              </div>
-              <div className="mt-1 text-[11px] text-slate-500">
-                同城急送模式 (41.6%)
-              </div>
-            </div>
-
-            {/* 3. 已自提数量 */}
-            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100">
-              <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
-                <div className="flex items-center">
-                  <span>已自提数量</span>
-                  <FormulaTooltip
-                    title="已自提数量"
-                    formula="已自提数量 = 自提订单中已到店完成核销的订单数"
-                    example="到店核销提货完成 = 206单"
-                    note="【数据源】：自提订单完成核销 verifyTime 记录。"
-                  />
+                <div className="mt-2 text-2xl font-black text-emerald-700 tracking-tight">
+                  350 <span className="text-sm font-normal text-slate-500">单</span>
                 </div>
-                <span className="p-1 bg-emerald-100 text-emerald-700 rounded-md">
-                  <QrCode className="w-3.5 h-3.5" />
-                </span>
-              </div>
-              <div className="mt-2 text-2xl font-black text-slate-900 tracking-tight">
-                206 <span className="text-sm font-normal text-slate-500">单</span>
-              </div>
-              <div className="mt-1 text-[11px] text-slate-500">
-                到店自提完成核销
-              </div>
-            </div>
-
-            {/* 4. 已送达数量 */}
-            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100">
-              <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
-                <div className="flex items-center">
-                  <span>已送达数量</span>
-                  <FormulaTooltip
-                    title="已送达数量"
-                    formula="已送达数量 = 同城配送订单中骑手成功送达确认签收的订单数"
-                    example="同城配送确认送达 = 144单"
-                    note="【数据源】：同城急送订单送达 deliveredTime 记录。"
-                  />
-                </div>
-                <span className="p-1 bg-sky-100 text-sky-700 rounded-md">
-                  <Bike className="w-3.5 h-3.5" />
-                </span>
-              </div>
-              <div className="mt-2 text-2xl font-black text-slate-900 tracking-tight">
-                144 <span className="text-sm font-normal text-slate-500">单</span>
-              </div>
-              <div className="mt-1 text-[11px] text-slate-500">
-                同城配送确认送达
-              </div>
-            </div>
-          </div>
-
-          {/* Volume Metric Cards - Part 2: 衍生复合指标 */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-            {/* 5. 用户下单数量 */}
-            <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-100">
-              <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
-                <div className="flex items-center">
-                  <span>用户下单数量</span>
-                  <FormulaTooltip
-                    title="用户下单数量"
-                    formula="用户下单数量 = 自提订单数 (208单) + 配送订单总数 (148单)"
-                    example="208单 (自提订单数) + 148单 (配送订单总数) = 356单"
-                    note="【数据源】：由前方「自提订单数」与「配送订单总数」相加得出。"
-                  />
-                </div>
-                <span className="p-1 bg-sky-100 text-sky-700 rounded-md">
-                  <ShoppingCart className="w-3.5 h-3.5" />
-                </span>
-              </div>
-              <div className="mt-2 text-2xl font-black text-slate-900 tracking-tight">
-                356 <span className="text-sm font-normal text-slate-500">单</span>
-              </div>
-              <div className="mt-1 text-[11px] text-emerald-600 font-medium flex items-center">
-                <ArrowUpRight className="w-3 h-3 mr-0.5" /> 自提 208 + 配送 148
-              </div>
-            </div>
-
-            {/* 6. 已完成订单 */}
-            <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-100">
-              <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
-                <div className="flex items-center">
-                  <span>已完成订单</span>
-                  <FormulaTooltip
-                    title="已完成订单"
-                    formula="已完成订单 = 已自提数量 (206单) + 已送达数量 (144单)"
-                    example="206单 (已自提数量) + 144单 (已送达数量) = 350单"
-                    note="【数据源】：由前方「已自提数量」与「已送达数量」相加得出。"
-                  />
-                </div>
-                <span className="p-1 bg-emerald-100 text-emerald-700 rounded-md">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                </span>
-              </div>
-              <div className="mt-2 text-2xl font-black text-emerald-700 tracking-tight">
-                350 <span className="text-sm font-normal text-slate-500">单</span>
-              </div>
-              <div className="mt-1 text-[11px] text-slate-500">
-                已自提 206 + 已送达 144
-              </div>
-            </div>
-
-            {/* 7. 订单交付完成率 */}
-            <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-100">
-              <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
-                <div className="flex items-center">
-                  <span>订单交付完成率</span>
-                  <FormulaTooltip
-                    title="订单交付完成率"
-                    formula="订单交付完成率 = (已完成订单 ÷ 用户下单数量) × 100%"
-                    example="350单 (已完成订单) ÷ 356单 (用户下单数量) = 98.3%"
-                    note="【数据源】：由前方「已完成订单」除以「用户下单数量」计算得出。"
-                  />
-                </div>
-                <span className="p-1 bg-emerald-100 text-emerald-700 rounded-md">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                </span>
-              </div>
-              <div className="mt-2 text-2xl font-black text-emerald-600 tracking-tight">
-                98.3%
               </div>
               <div className="mt-1 text-[11px] text-emerald-600 font-medium">
-                交付超时率控制在 1.2%
+                凭提货码完成核销
+              </div>
+            </div>
+
+            {/* 3. 待核销 */}
+            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100 flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
+                  <div className="flex items-center">
+                    <span>待核销</span>
+                    <FormulaTooltip
+                      title="待核销"
+                      formula="待核销 = 门店已接单备货，顾客尚未到店出示提货码核销的单数"
+                      example="进行中待核销 = 6单 (占比 1.7%)"
+                      note="【数据源】：订单状态为 ready_pickup 或 picking 的未核销订单。"
+                    />
+                  </div>
+                  <span className="p-1 bg-amber-100 text-amber-700 rounded-md">
+                    <Clock className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+                <div className="mt-2 text-2xl font-black text-amber-700 tracking-tight">
+                  6 <span className="text-sm font-normal text-slate-500">单</span>
+                </div>
+              </div>
+              <div className="mt-1 text-[11px] text-amber-600 font-medium">
+                顾客待到店提货
+              </div>
+            </div>
+
+            {/* 4. 自提交付完成率 */}
+            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100 flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
+                  <div className="flex items-center">
+                    <span>自提交付完成率</span>
+                    <FormulaTooltip
+                      title="自提交付完成率"
+                      formula="自提交付完成率 = (已核销数量 ÷ 订单量) × 100%"
+                      example="350单 (已核销) ÷ 356单 (订单量) = 98.3%"
+                      note="【数据源】：由前方「已核销数量」除以「订单量」计算得出。"
+                    />
+                  </div>
+                  <span className="p-1 bg-teal-100 text-teal-700 rounded-md">
+                    <TrendingUp className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+                <div className="mt-2 text-2xl font-black text-teal-700 tracking-tight">
+                  98.3%
+                </div>
+              </div>
+              <div className="mt-1 text-[11px] text-teal-600 font-medium">
+                自提履约表现优异
+              </div>
+            </div>
+
+            {/* 5. 已自提总金额 */}
+            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100 flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
+                  <div className="flex items-center">
+                    <span>已自提总金额</span>
+                    <FormulaTooltip
+                      title="已自提总金额"
+                      formula="已自提总金额 = 经由到店自提并完成核销交付的有效订单实收金额总和"
+                      example="全站已自提总金额 = ¥18,920.00"
+                      note="【数据源】：到店自提并已完成核销的订单金额汇总，不包含任何配送运费。"
+                    />
+                  </div>
+                  <span className="p-1 bg-emerald-100 text-emerald-700 rounded-md">
+                    <DollarSign className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+                <div className="mt-2 text-2xl font-black text-slate-900 tracking-tight">
+                  ¥18,920.00
+                </div>
+              </div>
+              <div className="mt-1 text-[11px] text-emerald-600 font-medium flex items-center">
+                <CheckCircle2 className="w-3 h-3 mr-0.5" /> 零运费 / 门店核销交付
               </div>
             </div>
           </div>
@@ -688,114 +629,6 @@ export const BasicDataAnalyticsView: React.FC<BasicDataAnalyticsViewProps> = ({
                   </div>
                 );
               })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 3. 自提/配送占比模块 (Pickup vs Delivery Ratio) */}
-      {(activeTab === 'all' || activeTab === 'ratio') && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="flex items-center space-x-2">
-              <span className="w-2 h-4 bg-sky-600 rounded-full" />
-              <h3 className="text-sm font-black text-slate-900">三、 自提 / 配送交付占比分析</h3>
-            </div>
-            <span className="text-xs text-slate-500">双交付模式对比</span>
-          </div>
-
-          {/* Ratio Big Visual Blocks */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Pickup Block */}
-            <div className="bg-gradient-to-br from-emerald-50/80 to-teal-50/40 rounded-2xl p-5 border border-emerald-200/60 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
-                    <Store className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900">到店自提模式</h4>
-                    <p className="text-xs text-slate-500">无配送费 / 凭核销提货码提货</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-3xl font-black text-emerald-700">{pickupPct}%</div>
-                  <div className="text-[11px] text-emerald-800 font-bold">订单量占比</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="bg-white/90 rounded-xl p-3 border border-emerald-100">
-                  <div className="text-[11px] text-slate-500">自提累计单量</div>
-                  <div className="text-lg font-black text-slate-900 mt-0.5">{pickupCount + 210} 单</div>
-                </div>
-                <div className="bg-white/90 rounded-xl p-3 border border-emerald-100">
-                  <div className="text-[11px] text-slate-500">自提金额</div>
-                  <div className="text-lg font-black text-slate-900 mt-0.5">¥{(pickupGmv + 7800).toFixed(2)}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Delivery Block */}
-            <div className="bg-gradient-to-br from-sky-50/80 to-indigo-50/40 rounded-2xl p-5 border border-sky-200/60 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold">
-                    <Truck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900">同城即时急送模式</h4>
-                    <p className="text-xs text-slate-500">顺丰/闪送/美团/达达 专人配送</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-3xl font-black text-sky-700">{deliveryPct}%</div>
-                  <div className="text-[11px] text-sky-800 font-bold">订单量占比</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="bg-white/90 rounded-xl p-3 border border-sky-100">
-                  <div className="text-[11px] text-slate-500">同城急送单量</div>
-                  <div className="text-lg font-black text-slate-900 mt-0.5">{deliveryCount + 140} 单</div>
-                </div>
-                <div className="bg-white/90 rounded-xl p-3 border border-sky-100">
-                  <div className="text-[11px] text-slate-500">配送金额</div>
-                  <div className="text-lg font-black text-slate-900 mt-0.5">¥{(deliveryGmv + 5600).toFixed(2)}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Store by store breakdown */}
-          <div className="bg-slate-50/60 rounded-xl p-4 border border-slate-200/80">
-            <h4 className="text-xs font-black text-slate-900 mb-1">各商户门店交付结构分布</h4>
-            <p className="text-[11px] text-slate-400 mb-3">展示不同商户生鲜与餐饮在自提与配送交付的渗透分布</p>
-
-            <div className="space-y-3">
-              {merchantStats.map((m, idx) => (
-                <div key={`ratio-${m.id || idx}`} className="space-y-1.5 bg-white p-3 rounded-xl border border-slate-200/60">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold text-slate-800">{m.name}</span>
-                    <div className="flex items-center space-x-3 text-[11px]">
-                      <span className="text-emerald-700 font-bold">自提 {m.pickupRate}%</span>
-                      <span className="text-sky-700 font-bold">配送 {100 - m.pickupRate}%</span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-slate-100 h-2.5 rounded-full flex overflow-hidden">
-                    <div
-                      style={{ width: `${m.pickupRate}%` }}
-                      className="bg-emerald-500 h-full"
-                      title={`自提: ${m.pickupRate}%`}
-                    />
-                    <div
-                      style={{ width: `${100 - m.pickupRate}%` }}
-                      className="bg-sky-500 h-full"
-                      title={`配送: ${100 - m.pickupRate}%`}
-                    />
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </div>

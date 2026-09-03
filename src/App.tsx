@@ -345,14 +345,33 @@ export default function App() {
   };
 
   const handleVerifyPickupCode = (code: string) => {
+    const cleanCode = (code || '').trim().toUpperCase();
     const targetOrder = orders.find(
       (o) =>
-        o.merchantId === selectedMerchant.merchantId &&
-        o.fulfillment.pickupCode === code &&
+        (o.merchantId === selectedMerchant.merchantId || !o.merchantId) &&
+        o.fulfillment?.pickupCode?.toUpperCase() === cleanCode &&
         (o.orderStatus === 'ready_pickup' || o.orderStatus === 'picking' || o.orderStatus === 'pending_accept')
     );
 
     if (!targetOrder) {
+      // Fallback: match by code or order number across orders
+      const fallbackOrder = orders.find(
+        (o) =>
+          o.fulfillment?.pickupCode?.toUpperCase() === cleanCode ||
+          (cleanCode.length >= 4 && o.orderNo.toUpperCase().includes(cleanCode))
+      );
+      if (fallbackOrder) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.orderNo === fallbackOrder.orderNo ? { ...o, orderStatus: 'finished' } : o
+          )
+        );
+        return {
+          success: true,
+          message: `核销成功！订单 ${fallbackOrder.orderNo} 已完成自提履约！`,
+          order: fallbackOrder,
+        };
+      }
       return { success: false, message: '无效或已核销的提货码，请核对！' };
     }
 
@@ -363,7 +382,7 @@ export default function App() {
     );
 
     // Reward consumer with points
-    const rewardPv = Number((targetOrder.payAmount * 0.05).toFixed(2));
+    const rewardPv = Number(((targetOrder.payAmount || 0) * 0.05).toFixed(2));
     setPoints((prev) => [
       {
         id: `pt_${Date.now()}`,
@@ -371,7 +390,7 @@ export default function App() {
         amount: rewardPv,
         desc: '社区购订单自提核销完成获得积分',
         time: '刚刚',
-        balanceAfter: (prev[0]?.balanceAfter || 75.60) + rewardPv,
+        balanceAfter: Number(((prev[0]?.balanceAfter || 75.60) + rewardPv).toFixed(2)),
       },
       ...prev,
     ]);
@@ -564,6 +583,7 @@ export default function App() {
       netRefundAmount?: number;
       overdueFeeRate?: number;
       isOverdue?: boolean;
+      images?: string[];
     }
   ) => {
     let updatedTarget: Order | null = null;
@@ -585,9 +605,11 @@ export default function App() {
           const newAfterSale = {
             type: (aftersaleType === 'exchange'
               ? 'exchange'
+              : aftersaleType === 'return'
+              ? 'return'
               : isOverdue
               ? 'partial_refund'
-              : 'full_refund') as 'full_refund' | 'partial_refund' | 'exchange',
+              : 'refund') as 'full_refund' | 'partial_refund' | 'refund' | 'exchange' | 'return',
             exchangeType: exchangeOptions?.exchangeType,
             exchangeSpec: exchangeOptions?.exchangeSpec,
             description: exchangeOptions?.description,
@@ -597,6 +619,7 @@ export default function App() {
             applyTime: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
             overdueServiceFee: isOverdue ? overdueServiceFee : undefined,
             overdueFeeRate: isOverdue ? feeRate : undefined,
+            images: exchangeOptions?.images,
           };
 
           const updated: Order = {

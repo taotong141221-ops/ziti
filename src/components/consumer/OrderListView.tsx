@@ -363,7 +363,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
       case 'refunded':
         return (
           <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-            {order.isOverduePickup ? '已退款(扣10%服务费)' : '已退款'}
+            已退款
           </span>
         );
       case 'cancelled':
@@ -640,28 +640,36 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                           <img
                             src={order.merchantDoorImage}
                             alt={order.merchantName}
-                            className="w-7 h-7 rounded-lg object-cover shrink-0 border border-gray-100"
+                            className="w-8 h-8 rounded-lg object-cover shrink-0 border border-gray-100"
                             referrerPolicy="no-referrer"
                           />
                         ) : (
-                          <span className="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                            <Store className="w-3.5 h-3.5" />
+                          <span className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <Store className="w-4 h-4" />
                           </span>
                         )}
-                        <div className="flex items-center space-x-1.5 min-w-0">
+                        <div className="flex flex-col min-w-0">
                           <span className="text-xs font-black text-gray-900 truncate">
                             {order.merchantName}
                           </span>
-                          <span className="text-[10px] px-1.5 py-0.2 rounded font-bold shrink-0 bg-blue-50 text-blue-700 border border-blue-200/70">
-                            线上
-                          </span>
+                          <div className="mt-0.5 flex items-center">
+                            <span
+                              className={`text-[9px] px-1.5 py-0.2 rounded font-bold shrink-0 ${
+                                order.channel === 'offline'
+                                  ? 'bg-purple-50 text-purple-700 border border-purple-200/70'
+                                  : 'bg-blue-50 text-blue-700 border border-blue-200/70'
+                              }`}
+                            >
+                              {order.channel === 'offline' ? '线下' : '线上'}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       {getStatusBadge(order)}
                     </div>
 
-                    {/* Scheduled Pickup Time Point (时间点，全端统一为 HH:mm，如 12:42) */}
-                    {(order.selectedPickupTime || order.createTime) && (
+                    {/* Scheduled Pickup Time Point (已退款状态去掉自提时间展示) */}
+                    {order.orderStatus !== 'refunded' && (order.selectedPickupTime || order.createTime) && (
                       <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl px-2.5 py-1.5 flex items-center justify-between text-[11px]">
                         <div className="flex items-center space-x-1 text-emerald-900">
                           <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -671,7 +679,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                         </div>
                         {order.isOverduePickup && order.orderStatus === 'ready_pickup' && (
                           <span className="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200 text-[10px]">
-                            已超时 (退款扣10%)
+                            已超时
                           </span>
                         )}
                       </div>
@@ -790,7 +798,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                               className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-[11px] font-bold rounded-xl border border-rose-200 transition cursor-pointer"
                               id={`btn-apply-aftersale-pickup-${order.orderNo}`}
                             >
-                              {order.isOverduePickup ? '申请退款 (扣10%)' : '申请退款'}
+                              申请售后
                             </button>
                           )}
                           <button

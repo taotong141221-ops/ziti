@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, ShieldCheck, KeyRound, AlertCircle, ShoppingBag } from 'lucide-react';
+import { X, CheckCircle2, ShieldCheck, KeyRound, AlertCircle, ShoppingBag, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MerchantOrderItem, formatPickupTimePoint } from './MerchantOrdersView';
 
@@ -69,8 +69,14 @@ export const PickupVerifyModal: React.FC<PickupVerifyModalProps> = ({
         {/* Order Info Summary Box */}
         <div className="bg-gradient-to-r from-emerald-50/70 to-teal-50/70 border border-emerald-100/90 rounded-2xl p-3.5 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-800">
-              顾客: {order.customerName} {order.customerPhone ? `(${order.customerPhone})` : ''}
+            <span className="text-xs font-bold text-gray-800 flex items-center space-x-1">
+              <span>顾客: {order.customerName}</span>
+              {order.customerPhone && (
+                <span className="font-mono text-gray-600 flex items-center space-x-0.5">
+                  <span>({order.customerPhone})</span>
+                  <Phone className="w-3 h-3 text-[#00B578]" />
+                </span>
+              )}
             </span>
             <span className="text-xs font-black text-rose-600 font-mono">
               实收 ¥{order.payAmount.toFixed(2)}

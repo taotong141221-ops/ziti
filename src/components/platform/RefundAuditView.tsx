@@ -21,6 +21,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { Order } from '../../types';
+import { formatPickupTimePoint } from '../merchant/MerchantOrdersView';
 
 interface RefundAuditViewProps {
   orders: Order[];
@@ -177,6 +178,7 @@ export const RefundAuditView: React.FC<RefundAuditViewProps> = ({
                 <th className="py-3 px-4 min-w-[140px] whitespace-nowrap">售后编号</th>
                 <th className="py-3 px-3 min-w-[150px] whitespace-nowrap">关联订单号</th>
                 <th className="py-3 px-3 min-w-[130px] whitespace-nowrap">买家信息</th>
+                <th className="py-3 px-3 min-w-[110px] whitespace-nowrap">提货时间</th>
                 <th className="py-3 px-3 min-w-[140px] whitespace-nowrap">涉及商户</th>
                 <th className="py-3 px-3 min-w-[100px] whitespace-nowrap">售后类型</th>
                 <th className="py-3 px-3 min-w-[200px]">退款商品</th>
@@ -195,7 +197,7 @@ export const RefundAuditView: React.FC<RefundAuditViewProps> = ({
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="py-12 text-center text-slate-400">
+                  <td colSpan={14} className="py-12 text-center text-slate-400">
                     暂无匹配的退款与售后工单记录
                   </td>
                 </tr>
@@ -222,6 +224,14 @@ export const RefundAuditView: React.FC<RefundAuditViewProps> = ({
                     af?.refundTime ||
                     (isCompleted ? (af?.finishTime || o.finishTime || '2026-08-26 09:35:10') : null);
 
+                  const pickupTimeDisplay = formatPickupTimePoint(
+                    o.fulfillment?.selectedPickupTime ||
+                      o.selectedPickupTime ||
+                      o.fulfillment?.pickupTime ||
+                      o.pickupTime ||
+                      o.createTime
+                  );
+
                   return (
                     <tr key={o.orderNo} className="hover:bg-slate-50/70 transition-colors">
                       {/* 1. 售后编号 */}
@@ -236,8 +246,8 @@ export const RefundAuditView: React.FC<RefundAuditViewProps> = ({
                         <div className="font-mono font-bold text-slate-700 text-xs">
                           {o.orderNo}
                         </div>
-                        <span className="text-[10px] text-slate-400 font-sans block">
-                          {o.fulfillType === 'pickup' ? '到店自提' : '同城配送'}
+                        <span className="text-[10px] text-emerald-700 font-bold font-sans block">
+                          到店自提
                         </span>
                       </td>
 
@@ -252,6 +262,13 @@ export const RefundAuditView: React.FC<RefundAuditViewProps> = ({
                             {receiverPhone}
                           </span>
                         )}
+                      </td>
+
+                      {/* 提货时间 */}
+                      <td className="py-3.5 px-3 whitespace-nowrap">
+                        <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50/80 px-2 py-0.5 rounded-md border border-emerald-200/60 inline-block">
+                          {pickupTimeDisplay}
+                        </span>
                       </td>
 
                       {/* 4. 涉及商户 */}

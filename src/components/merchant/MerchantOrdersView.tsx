@@ -12,6 +12,13 @@ import {
   Calendar,
   Layers,
   Eye,
+  Edit3,
+  AlertCircle,
+  X,
+  Tag,
+  Sparkles,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Order } from '../../types';
@@ -37,7 +44,7 @@ export interface MerchantOrderItem {
   customerAvatar: string;
   customerAddress?: string;
   consumeTimesTag: string; // e.g. "在本店消费2次"
-  statusText: string; // e.g. "付款成功"
+  statusText: string; // e.g. "付款成功" | "待付款"
   time: string; // 下单时间 e.g. "2026-08-27 19:38:56"
   pickupTime?: string; // 客户自提时间 e.g. "2026-08-27 19:38:56"
   payTime?: string;
@@ -55,6 +62,22 @@ export interface MerchantOrderItem {
   isRefunded?: boolean;
   refundTime?: string;
   isToday?: boolean;
+  isUnpaid?: boolean; // 是否未付款 (消费者发起订单未付款)
+  originalPayAmount?: number; // 商家改价前原需付金额
+  isPriceModified?: boolean; // 商家是否已修改价格
+  priceModifyReason?: string; // 改价原因/备注
+  // 换货小票相关信息
+  isExchangeReceipt?: boolean;
+  exchangeInfo?: {
+    exchangeTime: string;
+    newProductTitle: string;
+    newSpec?: string;
+    newQuantity: number;
+    newPrice: number;
+    oldProductTitle?: string;
+    diffAmount?: number;
+    merchantNote?: string;
+  };
   items: OrderItemSpec[];
 }
 
@@ -68,17 +91,105 @@ interface MerchantOrdersViewProps {
 }
 
 export const formatPickupTimePoint = (time?: string): string => {
-  if (!time) return '17:15';
+  if (!time) return '18:40';
   const trimmed = time.trim();
-  const timePart = trimmed.includes(' ') ? trimmed.split(' ')[1] : trimmed;
+  const noRange = trimmed.includes('-') && !trimmed.includes('2026-') ? trimmed.split('-')[0].trim() : trimmed;
+  const timePart = noRange.includes(' ')
+    ? noRange.split(' ').find((p) => p.includes(':')) || noRange.split(' ')[1] || noRange
+    : noRange;
   const sub = timePart.split(':');
   if (sub.length >= 2) {
     return `${sub[0].padStart(2, '0')}:${sub[1].padStart(2, '0')}`;
   }
-  return timePart;
+  return timePart || '18:40';
 };
 
 const DEFAULT_ORDERS: MerchantOrderItem[] = [
+  // 消费者发起订单未付款 (未付款列表，商家可修改价格)
+  {
+    id: 'mo_unpaid_1',
+    orderNo: 'SF20260827000028',
+    customerName: '李梦婷',
+    customerPhone: '139****5821',
+    customerAvatar:
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
+    customerAddress: '到店自提 (老街坊红谷滩绿茵路店)',
+    consumeTimesTag: '在本店消费1次',
+    statusText: '待付款',
+    time: '2026-08-27 19:42:10',
+    pickupTime: '2026-08-27 20:30:00',
+    orderAmount: 58.0,
+    payAmount: 58.0,
+    rebateDiscount: 5.8,
+    deductedAmount: 0.0,
+    fulfillType: 'pickup',
+    channel: 'online',
+    isReady: false,
+    isRefunded: false,
+    isToday: true,
+    isUnpaid: true,
+    pickupStatus: 'pending',
+    items: [
+      {
+        title: '老街坊秘制红烧牛肉面',
+        spec: '豪华加肉加蛋碗 (双倍肉)',
+        price: 26.0,
+        quantity: 1,
+        image:
+          'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=200&auto=format&fit=crop&q=80',
+      },
+      {
+        title: '秘制卤香牛腱切盘',
+        spec: '150g配秘制香辣蘸料',
+        price: 32.0,
+        quantity: 1,
+        image:
+          'https://images.unsplash.com/photo-1544025162-d76694265947?w=200&auto=format&fit=crop&q=80',
+      },
+    ],
+  },
+  {
+    id: 'mo_unpaid_2',
+    orderNo: 'SF20260827000029',
+    customerName: '张建国',
+    customerPhone: '186****9033',
+    customerAvatar:
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+    customerAddress: '到店自提 (老街坊红谷滩绿茵路店)',
+    consumeTimesTag: '在本店消费4次',
+    statusText: '待付款',
+    time: '2026-08-27 19:15:22',
+    pickupTime: '2026-08-27 20:00:00',
+    orderAmount: 38.0,
+    payAmount: 38.0,
+    rebateDiscount: 3.8,
+    deductedAmount: 0.0,
+    fulfillType: 'pickup',
+    channel: 'online',
+    isReady: false,
+    isRefunded: false,
+    isToday: true,
+    isUnpaid: true,
+    pickupStatus: 'pending',
+    items: [
+      {
+        title: '特制酸汤肥牛面',
+        spec: '特浓金汤大碗 (含双倍肥牛)',
+        price: 32.0,
+        quantity: 1,
+        image:
+          'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=200&auto=format&fit=crop&q=80',
+      },
+      {
+        title: '老北京手工酸梅汤 (500ml冰镇)',
+        spec: '500ml微甜少冰 (手工慢熬)',
+        price: 6.0,
+        quantity: 1,
+        image:
+          'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=200&auto=format&fit=crop&q=80',
+      },
+    ],
+  },
   {
     id: 'mo_1000111_1',
     orderNo: 'SF20260827000005',
@@ -205,6 +316,49 @@ const DEFAULT_ORDERS: MerchantOrderItem[] = [
         quantity: 1,
         image:
           'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=200&auto=format&fit=crop&q=80',
+      },
+    ],
+  },
+  {
+    id: 'mo_1000111_today_offline_refund',
+    orderNo: 'SF20260827000008',
+    customerName: '赵云海',
+    customerPhone: '158****6633',
+    customerAvatar:
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
+    customerAddress: '门店现场消费 (线下买单)',
+    consumeTimesTag: '在本店消费2次',
+    statusText: '已退款',
+    time: '2026-08-27 15:20:00',
+    payTime: '2026-08-27 15:20:10',
+    orderAmount: 42.0,
+    payAmount: 42.0,
+    rebateDiscount: 4.2,
+    deductedAmount: 0.0,
+    fulfillType: 'pickup',
+    channel: 'offline',
+    isReady: true,
+    readyTime: '15:22:00',
+    pickupStatus: 'completed',
+    isRefunded: true,
+    refundTime: '2026-08-27 15:45:00',
+    isToday: true,
+    items: [
+      {
+        title: '老街坊招牌红烧牛肉面 (大份)',
+        spec: '大份加辣',
+        price: 28.0,
+        quantity: 1,
+        image:
+          'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=200&auto=format&fit=crop&q=80',
+      },
+      {
+        title: '手作香脆炸油条 (2根)',
+        spec: '现炸酥脆',
+        price: 7.0,
+        quantity: 2,
+        image:
+          'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=200&auto=format&fit=crop&q=80',
       },
     ],
   },
@@ -361,9 +515,10 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
 }) => {
   const [orders, setOrders] = useState<MerchantOrderItem[]>(DEFAULT_ORDERS);
 
-  // Filters State: orderScope ('today' | 'all') + Time Range for 'all'
+  // Filters State: orderScope ('today' | 'all') + Time Range for 'all' + Status Filter
   const [orderScope, setOrderScope] = useState<'today' | 'all'>('today');
   const [timePreset, setTimePreset] = useState<'all' | 'today' | 'yesterday' | '7days' | 'custom'>('today');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'unpaid' | 'pending_ready' | 'pending_pickup' | 'completed' | 'refunded'>('all');
   const [customStartDate, setCustomStartDate] = useState<string>('2026-06-27');
   const [customEndDate, setCustomEndDate] = useState<string>('2026-08-28');
   const [showCustomPicker, setShowCustomPicker] = useState<boolean>(false);
@@ -373,6 +528,11 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
   const [verifyModalOrder, setVerifyModalOrder] = useState<MerchantOrderItem | null>(null);
   const [printReceiptOrder, setPrintReceiptOrder] = useState<MerchantOrderItem | null>(null);
   const [refundTarget, setRefundTarget] = useState<MerchantOrderItem | null>(null);
+
+  // Modify Price Modal State (消费者发起未付款订单，商家可修改价格)
+  const [modifyPriceOrder, setModifyPriceOrder] = useState<MerchantOrderItem | null>(null);
+  const [modifyPriceValue, setModifyPriceValue] = useState<number>(0);
+  const [modifyPriceReason, setModifyPriceReason] = useState<string>('常客特惠/协商减价');
 
   // Toast
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -390,11 +550,13 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
   // Group 2: 今日统计
   const todayOrders = orders.filter((o) => o.isToday);
   const todayPickupCount = todayOrders.length;
+  const todayUnpaidCount = todayOrders.filter((o) => o.isUnpaid || o.statusText === '待付款').length;
+  const totalUnpaidCount = orders.filter((o) => o.isUnpaid || o.statusText === '待付款').length;
   const todayPendingReadyCount = todayOrders.filter(
-    (o) => !o.isReady && !o.isRefunded && o.channel !== 'offline'
+    (o) => !o.isReady && !o.isRefunded && !o.isUnpaid && o.statusText !== '待付款' && o.channel !== 'offline'
   ).length;
   const todayPendingPickupCount = todayOrders.filter(
-    (o) => o.isReady && o.pickupStatus !== 'completed' && !o.isRefunded
+    (o) => o.isReady && o.pickupStatus !== 'completed' && !o.isRefunded && !o.isUnpaid && o.statusText !== '待付款'
   ).length;
   const todayPickupRefundCount = todayOrders.filter((o) => o.isRefunded).length;
 
@@ -406,24 +568,83 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
       // 1. Order Scope: 今日订单 vs 全部订单 (参考图2)
       if (orderScope === 'today') {
         if (!order.isToday && !orderDate.startsWith('2026-08-27')) return false;
-        return true;
+      } else {
+        // 2. 全部订单下的时间筛选
+        if (timePreset === 'today') {
+          if (!order.isToday && !orderDate.startsWith('2026-08-27')) return false;
+        } else if (timePreset === 'yesterday') {
+          if (!orderDate.startsWith('2026-08-26')) return false;
+        } else if (timePreset === '7days') {
+          if (orderDate < '2026-08-20') return false;
+        } else if (timePreset === 'custom') {
+          if (customStartDate && orderDate < customStartDate) return false;
+          if (customEndDate && orderDate > customEndDate) return false;
+        }
       }
 
-      // 2. 全部订单下的时间筛选
-      if (timePreset === 'today') {
-        if (!order.isToday && !orderDate.startsWith('2026-08-27')) return false;
-      } else if (timePreset === 'yesterday') {
-        if (!orderDate.startsWith('2026-08-26')) return false;
-      } else if (timePreset === '7days') {
-        if (orderDate < '2026-08-20') return false;
-      } else if (timePreset === 'custom') {
-        if (customStartDate && orderDate < customStartDate) return false;
-        if (customEndDate && orderDate > customEndDate) return false;
+      // 3. Status Filter (状态筛选：未付款、待备货、待自提、已完成、已退款)
+      if (statusFilter === 'unpaid') {
+        if (!order.isUnpaid && order.statusText !== '待付款') return false;
+      } else if (statusFilter === 'pending_ready') {
+        if (order.isUnpaid || order.statusText === '待付款' || order.isRefunded || order.isReady || order.channel === 'offline') return false;
+      } else if (statusFilter === 'pending_pickup') {
+        if (order.isUnpaid || order.statusText === '待付款' || order.isRefunded || !order.isReady || order.pickupStatus === 'completed' || order.channel === 'offline') return false;
+      } else if (statusFilter === 'completed') {
+        if (order.isRefunded || order.isUnpaid || order.statusText === '待付款' || (order.channel !== 'offline' && order.pickupStatus !== 'completed')) return false;
+      } else if (statusFilter === 'refunded') {
+        if (!order.isRefunded) return false;
       }
 
       return true;
     });
-  }, [orders, orderScope, timePreset, customStartDate, customEndDate]);
+  }, [orders, orderScope, timePreset, customStartDate, customEndDate, statusFilter]);
+
+  // Action: Open Modify Price Modal
+  const handleOpenModifyPrice = (order: MerchantOrderItem) => {
+    setModifyPriceOrder(order);
+    setModifyPriceValue(order.payAmount);
+    setModifyPriceReason(order.priceModifyReason || '常客特惠/协商减价');
+  };
+
+  // Action: Confirm Modify Price
+  const handleConfirmModifyPrice = () => {
+    if (!modifyPriceOrder) return;
+    const finalPrice = Math.max(0.01, parseFloat(Number(modifyPriceValue).toFixed(2)));
+    const originalPrice = modifyPriceOrder.originalPayAmount ?? modifyPriceOrder.payAmount;
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === modifyPriceOrder.id
+          ? {
+              ...o,
+              payAmount: finalPrice,
+              isPriceModified: true,
+              originalPayAmount: originalPrice,
+              priceModifyReason: modifyPriceReason,
+            }
+          : o
+      )
+    );
+
+    if (detailModalOrder && detailModalOrder.id === modifyPriceOrder.id) {
+      setDetailModalOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              payAmount: finalPrice,
+              isPriceModified: true,
+              originalPayAmount: originalPrice,
+              priceModifyReason: modifyPriceReason,
+            }
+          : null
+      );
+    }
+
+    setModifyPriceOrder(null);
+    playChime();
+    speakText(`订单价格已修改为 ${finalPrice} 元！`);
+    showToast(`订单 ${modifyPriceOrder.orderNo} 实付金额已成功修改为 ¥${finalPrice.toFixed(2)}`);
+  };
 
   // Action: Mark as Ready
   const handleMarkReady = (order: MerchantOrderItem) => {
@@ -498,6 +719,14 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
   };
 
   const renderStatusBadge = (order: MerchantOrderItem) => {
+    if (order.isUnpaid || order.statusText === '待付款') {
+      return (
+        <span className="bg-rose-50 text-rose-600 border border-rose-200 text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-1 shrink-0 animate-pulse">
+          <Clock className="w-3 h-3 text-rose-500" />
+          <span>待付款</span>
+        </span>
+      );
+    }
     if (order.isRefunded) {
       return (
         <span className="bg-rose-50 text-rose-600 border border-rose-200 text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-1 shrink-0">
@@ -576,11 +805,17 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
           {/* Statistics Grid */}
           <div className="mt-3.5 space-y-2.5">
             <div className="bg-[#F8F9FB] rounded-xl p-2.5 border border-gray-100/70">
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-5 gap-1">
                 <div className="bg-white rounded-lg p-1.5 border border-gray-100 shadow-2xs text-center">
                   <span className="text-[10px] text-gray-500 font-medium block truncate">今日自提</span>
                   <span className="text-sm font-black text-emerald-600 mt-0.5 block leading-tight">
                     {todayPickupCount}
+                  </span>
+                </div>
+                <div className="bg-white rounded-lg p-1.5 border border-rose-100 shadow-2xs text-center bg-rose-50/20">
+                  <span className="text-[10px] text-rose-500 font-bold block truncate">待付款</span>
+                  <span className="text-sm font-black text-rose-600 mt-0.5 block leading-tight">
+                    {todayUnpaidCount}
                   </span>
                 </div>
                 <div className="bg-white rounded-lg p-1.5 border border-gray-100 shadow-2xs text-center">
@@ -630,7 +865,7 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
         </div>
 
         {/* 顶部主 Tab: 今日订单 | 全部订单 (参考图2) */}
-        <div className="bg-white rounded-2xl p-3 border border-gray-100/90 shadow-2xs space-y-2">
+        <div className="bg-white rounded-2xl p-3 border border-gray-100/90 shadow-2xs space-y-2.5">
           <div className="flex items-center space-x-6 px-1 border-b border-gray-100/70 pb-2">
             <button
               type="button"
@@ -677,11 +912,50 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
             </button>
           </div>
 
+          {/* 状态分类标签: 全部、待付款(未付款订单列表)、待备货、待自提、已完成、已退款 */}
+          <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar pt-0.5">
+            {[
+              { id: 'all', label: '全部' },
+              {
+                id: 'unpaid',
+                label: '待付款',
+                badge: orderScope === 'today' ? todayUnpaidCount : totalUnpaidCount,
+              },
+              { id: 'pending_ready', label: '待备货' },
+              { id: 'pending_pickup', label: '待自提' },
+              { id: 'completed', label: '已完成' },
+              { id: 'refunded', label: '已退款' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setStatusFilter(tab.id as any)}
+                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center space-x-1 ${
+                  statusFilter === tab.id
+                    ? 'bg-[#00B578] text-white shadow-xs'
+                    : 'bg-[#F5F7FA] text-gray-600 hover:bg-gray-200/80'
+                }`}
+                id={`status-filter-${tab.id}`}
+              >
+                <span>{tab.label}</span>
+                {tab.badge !== undefined && tab.badge > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold leading-none ${
+                      statusFilter === tab.id ? 'bg-white text-rose-600' : 'bg-rose-500 text-white'
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
           {/* 全部订单模式下的时间筛选芯片 */}
           {orderScope === 'all' && (
-            <div className="pt-1 flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
+            <div className="pt-1 flex items-center space-x-1.5 overflow-x-auto no-scrollbar border-t border-gray-100/60">
               {[
-                { id: 'all', label: '全部' },
+                { id: 'all', label: '全部时间' },
                 { id: 'today', label: '今日' },
                 { id: 'yesterday', label: '昨日' },
                 { id: '7days', label: '近7日' },
@@ -748,15 +1022,25 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
                       referrerPolicy="no-referrer"
                     />
                     <div className="min-w-0">
-                      <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                      {/* 顾客姓名与消费频次 */}
+                      <div className="flex items-center space-x-1.5 flex-wrap">
                         <span className="text-sm font-black text-gray-900 truncate">
                           {order.customerName}
                         </span>
                         <span className="bg-[#FFF3EC] text-[#FF6B35] text-[10px] font-bold px-1.5 py-0.2 rounded-md shrink-0">
                           {order.consumeTimesTag}
                         </span>
+                      </div>
 
-                        {/* 渠道标签 (线上 / 线下) */}
+                      {/* 已改价标签放在名字下面；线上、线下的标签放在已改价后面 */}
+                      <div className="flex items-center space-x-1.5 mt-0.5 flex-wrap gap-y-1">
+                        {order.isPriceModified && (
+                          <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded font-bold border border-blue-200 shrink-0">
+                            已改价
+                          </span>
+                        )}
+
+                        {/* 渠道标签 (线上 / 线下) 放在已改价后面 */}
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md shrink-0 ${
                             order.channel === 'offline'
@@ -775,6 +1059,7 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
                           </span>
                         )}
                       </div>
+
                       <div className="text-[10px] text-gray-400 font-mono mt-0.5">
                         下单时间: {order.time}
                       </div>
@@ -811,28 +1096,15 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
                   <div>
                     让利: <span className="font-mono text-emerald-600 font-bold">-{order.rebateDiscount.toFixed(2)} PV</span>
                   </div>
-                  <div>
-                    实收: <span className="font-mono font-black text-rose-600 text-sm">¥{order.payAmount.toFixed(2)}</span>
+                  <div className="flex items-center space-x-1">
+                    <span>{order.isUnpaid || order.statusText === '待付款' ? '应付:' : '实收:'}</span>
+                    <span className="font-mono font-black text-rose-600 text-sm">¥{order.payAmount.toFixed(2)}</span>
                   </div>
                 </div>
 
-                {/* Bottom Action Buttons: 打印小票 | 确认自提 / 标记备货 | 线下退款 (详情按钮已删除，点击卡片即可进入详情) */}
+                {/* Bottom Action Buttons: 打印小票 | 修改价格 (未付款) | 已备货 / 核销 | 线下退款 */}
                 <div className="border-t border-gray-50 pt-2 flex items-center justify-between flex-wrap gap-1.5">
                   <div className="flex items-center space-x-1.5">
-                    {/* 查看详情 Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDetailModalOrder(order);
-                      }}
-                      className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-[#00B578] rounded-lg text-xs font-bold flex items-center space-x-1 transition cursor-pointer border border-emerald-200/60"
-                      id={`btn-view-detail-${order.orderNo}`}
-                    >
-                      <Eye className="w-3 h-3 text-[#00B578]" />
-                      <span>查看详情</span>
-                    </button>
-
                     {/* 打印小票 Button */}
                     <button
                       type="button"
@@ -849,56 +1121,79 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
                   </div>
 
                   <div className="flex items-center space-x-1.5">
-                    {/* 业务操作: 仅线上自提订单支持 标记备货 / 确认自提 */}
-                    {order.channel !== 'offline' && !order.isRefunded && (
-                      <>
-                        {!order.isReady ? (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMarkReady(order);
-                            }}
-                            className="px-2.5 py-1 bg-[#00B578] hover:bg-[#009e68] text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer active:scale-95 flex items-center space-x-1 transition"
-                            id={`btn-pickup-ready-${order.orderNo}`}
-                          >
-                            <PackageCheck className="w-3 h-3" />
-                            <span>标记备货</span>
-                          </button>
-                        ) : order.pickupStatus !== 'completed' ? (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setVerifyModalOrder(order);
-                            }}
-                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer active:scale-95 flex items-center space-x-1 transition"
-                            id={`btn-pickup-verify-${order.orderNo}`}
-                          >
-                            <CheckCircle2 className="w-3 h-3" />
-                            <span>确认自提</span>
-                          </button>
-                        ) : null}
-                      </>
-                    )}
-
-                    {/* 线下退款 Button */}
-                    {order.isRefunded ? (
-                      <span className="text-[11px] text-gray-400 bg-gray-50 px-2 py-0.8 rounded-lg">
-                        已退款
-                      </span>
-                    ) : (
+                    {/* 消费者发起未付款订单：商家修改价格操作 */}
+                    {(order.isUnpaid || order.statusText === '待付款') ? (
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setRefundTarget(order);
+                          handleOpenModifyPrice(order);
                         }}
-                        className="px-2 py-1 border border-[#FF4D4F] text-[#FF4D4F] hover:bg-rose-50 rounded-lg text-xs font-medium transition cursor-pointer"
-                        id={`btn-refund-${order.orderNo}`}
+                        className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer active:scale-95 flex items-center space-x-1.5 transition"
+                        id={`btn-modify-price-${order.orderNo}`}
                       >
-                        线下退款
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>修改价格</span>
                       </button>
+                    ) : (
+                      <>
+                        {/* 业务操作: 仅线上自提订单支持 已备货 / 核销 */}
+                        {order.channel !== 'offline' && !order.isRefunded && (
+                          <>
+                            {!order.isReady ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMarkReady(order);
+                                }}
+                                className="px-2.5 py-1 bg-[#00B578] hover:bg-[#009e68] text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer active:scale-95 flex items-center space-x-1 transition"
+                                id={`btn-pickup-ready-${order.orderNo}`}
+                              >
+                                <PackageCheck className="w-3 h-3" />
+                                <span>已备货</span>
+                              </button>
+                            ) : order.pickupStatus !== 'completed' ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setVerifyModalOrder(order);
+                                }}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer active:scale-95 flex items-center space-x-1 transition"
+                                id={`btn-pickup-verify-${order.orderNo}`}
+                              >
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>核销</span>
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.8 rounded-lg font-bold border border-emerald-200/60 flex items-center space-x-0.5">
+                                <CheckCircle2 className="w-3 h-3 text-[#00B578]" />
+                                <span>已核销</span>
+                              </span>
+                            )}
+                          </>
+                        )}
+
+                        {/* 线下退款 Button */}
+                        {order.isRefunded ? (
+                          <span className="text-[11px] text-gray-400 bg-gray-50 px-2 py-0.8 rounded-lg">
+                            已退款
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRefundTarget(order);
+                            }}
+                            className="px-2 py-1 border border-[#FF4D4F] text-[#FF4D4F] hover:bg-rose-50 rounded-lg text-xs font-medium transition cursor-pointer"
+                            id={`btn-refund-${order.orderNo}`}
+                          >
+                            线下退款
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -950,6 +1245,10 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
               setDetailModalOrder(null);
               setVerifyModalOrder(ord);
             }}
+            onModifyPrice={(ord) => {
+              setDetailModalOrder(null);
+              handleOpenModifyPrice(ord);
+            }}
           />
         )}
       </AnimatePresence>
@@ -1000,6 +1299,125 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
                   className="flex-1 py-2 bg-[#FF4D4F] hover:bg-rose-600 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
                 >
                   确认已退款
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal 6: 商家修改未付款订单价格弹窗 (消费者发起订单未付款，商家可修改价格) */}
+      <AnimatePresence>
+        {modifyPriceOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 15 }}
+              className="bg-white rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4 my-auto"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                <div className="flex items-center space-x-1.5 text-gray-900 font-black text-sm">
+                  <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </div>
+                  <span>修改未付款订单应付金额</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setModifyPriceOrder(null)}
+                  className="p-1 rounded-full hover:bg-gray-100 text-gray-400 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Order Info Card */}
+              <div className="bg-gray-50 rounded-2xl p-3 space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">订单号</span>
+                  <span className="font-mono font-bold text-gray-800">{modifyPriceOrder.orderNo}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">下单顾客</span>
+                  <span className="font-bold text-gray-800">{modifyPriceOrder.customerName}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">原订单总额</span>
+                  <span className="font-mono text-gray-700">¥{modifyPriceOrder.orderAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-gray-200/60">
+                  <span className="text-gray-500 font-medium">当前需付金额</span>
+                  <span className="font-mono font-bold text-gray-900">
+                    ¥{(modifyPriceOrder.originalPayAmount ?? modifyPriceOrder.payAmount).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Price Modifier Input */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-700 block">
+                  商家调整后实付金额 (元)
+                </label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3.5 text-lg font-black text-rose-600 font-sans">¥</span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.01"
+                    value={modifyPriceValue}
+                    onChange={(e) => setModifyPriceValue(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-8 pr-20 py-2.5 bg-rose-50/50 border border-rose-200 rounded-xl text-lg font-black text-rose-600 focus:outline-hidden focus:ring-2 focus:ring-rose-400 font-sans"
+                    placeholder="0.00"
+                  />
+                  <div className="absolute right-2 flex items-center space-x-1">
+                    <button
+                      type="button"
+                      onClick={() => setModifyPriceValue((prev) => Math.max(0.01, parseFloat((prev - 1).toFixed(2))))}
+                      className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-xs cursor-pointer"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModifyPriceValue((prev) => parseFloat((prev + 1).toFixed(2)))}
+                      className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-xs cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modify Reason */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700 block">改价说明 / 备注</label>
+                <input
+                  type="text"
+                  value={modifyPriceReason}
+                  onChange={(e) => setModifyPriceReason(e.target.value)}
+                  placeholder="请输入改价原因或备注"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModifyPriceOrder(null)}
+                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmModifyPrice}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer flex items-center justify-center space-x-1"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>确认改价</span>
                 </button>
               </div>
             </motion.div>

@@ -1,4 +1,4 @@
-export type FulfillType = 'pickup';
+export type FulfillType = 'pickup' | 'delivery';
 
 export type OrderStatus =
   | 'pending_pay'      // 待支付 / 待付款
@@ -141,6 +141,7 @@ export interface OrderFulfillment {
   pickupLocation?: { lng: number; lat: number };
   receiverName?: string;
   receiverPhone?: string;
+  receiverAddress?: string;
 }
 
 export interface AfterSaleInfo {
@@ -169,6 +170,9 @@ export interface AfterSaleInfo {
   overdueFeeRate?: number;     // 扣除服务费比例 (如 10%)
   exchangeProductTitle?: string;
   exchangeSpec?: string;
+  exchangeQuantity?: number;
+  exchangePrice?: number;
+  merchantNote?: string;
   applyTime?: string;         // 申请售后时间
   auditTime?: string;         // 审核时间
   auditReason?: string;

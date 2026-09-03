@@ -25,6 +25,7 @@ import {
   PackageCheck,
 } from 'lucide-react';
 import { Order } from '../../types';
+import { formatPickupTimePoint } from '../merchant/MerchantOrdersView';
 
 interface OrderInspectViewProps {
   orders: Order[];
@@ -156,13 +157,18 @@ export const OrderInspectView: React.FC<OrderInspectViewProps> = ({ orders }) =>
                       </div>
                     </td>
 
-                    {/* 履约方式 / 提货码具体展示 */}
+                    {/* 履约方式 / 提货码与提货时间具体展示 */}
                     <td className="py-3 px-3">
                       <div>
-                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md font-bold text-[10px] border border-emerald-200/60 inline-flex items-center space-x-1">
-                          <QrCode className="w-3 h-3 text-emerald-600" />
-                          <span>到店自提</span>
-                        </span>
+                        <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md font-bold text-[10px] border border-emerald-200/60 inline-flex items-center space-x-1">
+                            <QrCode className="w-3 h-3 text-emerald-600" />
+                            <span>到店自提</span>
+                          </span>
+                          <span className="px-1.5 py-0.5 bg-teal-50 text-teal-700 rounded font-mono font-bold text-[10px] border border-teal-200/60">
+                            提货: {formatPickupTimePoint(o.fulfillment?.selectedPickupTime || o.selectedPickupTime || o.fulfillment?.pickupTime || o.pickupTime || o.createTime)}
+                          </span>
+                        </div>
                         <div className="text-[11px] font-mono font-black text-emerald-800 mt-1">
                           提货码: {o.fulfillment?.pickupCode || (o.orderNo.replace(/\D/g, '').slice(-6) || '894216')}
                         </div>
@@ -174,9 +180,6 @@ export const OrderInspectView: React.FC<OrderInspectViewProps> = ({ orders }) =>
                       <div className="font-bold text-slate-900">
                         {o.address?.receiverName || o.fulfillment?.receiverName || '顾客'}
                       </div>
-                      <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
-                        {o.address?.phone || o.fulfillment?.receiverPhone || '138****0000'}
-                      </span>
                     </td>
 
                     {/* 实付金额 */}
@@ -274,7 +277,7 @@ export const OrderInspectView: React.FC<OrderInspectViewProps> = ({ orders }) =>
             </div>
 
             {/* Base Overview Info Grid */}
-            <div className="grid grid-cols-2 gap-2.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 text-xs">
               <div>
                 <span className="text-slate-400 block text-[11px]">所属商户门店</span>
                 <span className="font-bold text-slate-900">{selectedOrder.merchantName}</span>
@@ -282,6 +285,18 @@ export const OrderInspectView: React.FC<OrderInspectViewProps> = ({ orders }) =>
               <div>
                 <span className="text-slate-400 block text-[11px]">履约模式</span>
                 <span className="font-bold text-emerald-700">到店自提</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">提货时间</span>
+                <span className="font-mono font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60 inline-block">
+                  {formatPickupTimePoint(selectedOrder.fulfillment?.selectedPickupTime || selectedOrder.selectedPickupTime || selectedOrder.fulfillment?.pickupTime || selectedOrder.pickupTime || selectedOrder.createTime)}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">自提提货码</span>
+                <span className="font-mono font-black text-slate-900">
+                  {selectedOrder.fulfillment?.pickupCode || selectedOrder.orderNo.replace(/\D/g, '').slice(-6) || '894216'}
+                </span>
               </div>
               <div>
                 <span className="text-slate-400 block text-[11px]">顾客姓名 / 手机</span>
@@ -293,19 +308,11 @@ export const OrderInspectView: React.FC<OrderInspectViewProps> = ({ orders }) =>
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[11px]">自提提货码</span>
-                <span className="font-mono font-black text-slate-900">
-                  {selectedOrder.fulfillment?.pickupCode || selectedOrder.orderNo.replace(/\D/g, '').slice(-6) || '894216'}
+                <span className="text-slate-400 block text-[11px]">自提门店地址</span>
+                <span className="text-slate-800 font-medium truncate block" title={selectedOrder.address?.address || selectedOrder.fulfillment?.receiverAddress || selectedOrder.fulfillment?.pickupAddress || '江西省南昌市红谷滩区绿茵路'}>
+                  {selectedOrder.address?.address || selectedOrder.fulfillment?.receiverAddress || selectedOrder.fulfillment?.pickupAddress || '江西省南昌市红谷滩区绿茵路'}
                 </span>
               </div>
-              {(selectedOrder.address?.address || selectedOrder.fulfillment?.receiverAddress) && (
-                <div className="col-span-2 pt-1 border-t border-slate-200/60">
-                  <span className="text-slate-400 block text-[11px]">收货地址 / 自提地址</span>
-                  <span className="text-slate-800 font-medium">
-                    {selectedOrder.address?.address || selectedOrder.fulfillment?.receiverAddress || selectedOrder.fulfillment?.pickupAddress || '江西省南昌市红谷滩区绿茵路'}
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* 1. 商品明细 (具体展示顾客购买的东西) */}
@@ -388,20 +395,32 @@ export const OrderInspectView: React.FC<OrderInspectViewProps> = ({ orders }) =>
                   </span>
                 </div>
 
-                {/* 提货时间 (自提单) */}
-                {selectedOrder.fulfillType === 'pickup' && (
-                  <div className="flex justify-between items-center text-slate-600">
-                    <span className="text-slate-400">提货时间:</span>
-                    <span className="font-mono font-medium text-emerald-700 font-bold">
-                      {selectedOrder.fulfillment?.verifyTime ||
+                {/* 提货时间 */}
+                <div className="flex justify-between items-center text-slate-600">
+                  <span className="text-slate-400">提货时间:</span>
+                  <span className="font-mono font-medium text-emerald-700 font-bold">
+                    {formatPickupTimePoint(
+                      selectedOrder.fulfillment?.selectedPickupTime ||
+                        selectedOrder.selectedPickupTime ||
                         selectedOrder.fulfillment?.pickupTime ||
                         selectedOrder.pickupTime ||
-                        (selectedOrder.orderStatus === 'finished'
-                          ? selectedOrder.finishTime || '2026-08-25 16:30:12'
-                          : '待到店提货')}
-                    </span>
-                  </div>
-                )}
+                        selectedOrder.createTime
+                    )}
+                    {selectedOrder.fulfillment?.verifyTime ? (
+                      <span className="text-[11px] text-slate-400 font-normal ml-1">
+                        (已核销: {selectedOrder.fulfillment.verifyTime})
+                      </span>
+                    ) : selectedOrder.orderStatus === 'finished' ? (
+                      <span className="text-[11px] text-slate-400 font-normal ml-1">
+                        (已提货完成)
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-amber-600 font-normal ml-1">
+                        (待到店提货)
+                      </span>
+                    )}
+                  </span>
+                </div>
 
                 {/* 送达时间 (配送单) */}
                 {selectedOrder.fulfillType === 'delivery' && (

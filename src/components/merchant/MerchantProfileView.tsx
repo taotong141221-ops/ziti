@@ -176,30 +176,64 @@ export const MerchantProfileView: React.FC<MerchantProfileViewProps> = ({
         {/* Subpage Content Form */}
         <form onSubmit={handleSavePickupSettings} className="p-4 space-y-4 text-xs flex-1 flex flex-col justify-between">
           <div className="space-y-4">
-            {/* 规则导读 Banner */}
-            <div className="bg-emerald-50/80 border border-emerald-200/70 rounded-2xl p-3 space-y-1">
-              <div className="flex items-center space-x-1.5 text-xs font-black text-emerald-950">
-                <ShieldCheck className="w-4 h-4 text-[#00B578]" />
-                <span>门店自提业务规则体系</span>
+            {/* 规则一：门店自提具体地址与提货联系电话 (原规则五置顶) */}
+            <div className="bg-white rounded-2xl p-4 shadow-2xs border border-gray-100/90 space-y-3">
+              <div className="flex items-center justify-between border-b border-gray-50 pb-2">
+                <div className="flex items-center space-x-1.5">
+                  <MapPin className="w-4 h-4 text-[#00B578]" />
+                  <span className="text-xs font-black text-gray-900">规则一：门店自提地址与联系方式</span>
+                </div>
+                <span className="text-[10px] text-rose-500 font-bold">* 必填信息</span>
               </div>
-              <p className="text-[10px] text-emerald-800 leading-relaxed">
-                包含顾客预约时间限制、最短备货准备耗时、6位核销码时效、超时未提退款服务费扣除以及到店现场调换规则，全面保障商户生鲜备货权益与履约体验。
-              </p>
+
+              {/* 门店自提地址 */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-700">
+                  门店自提具体地址及提货方位指引 <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  value={pickupAddress}
+                  onChange={(e) => setPickupAddress(e.target.value)}
+                  placeholder="如: 红谷滩区绿茵路88号临街商铺 (老街坊生鲜大厅服务台)..."
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs outline-none focus:border-[#00B578] focus:bg-white text-gray-800 transition"
+                />
+              </div>
+
+              {/* 门店自提联系电话 */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-700 flex items-center space-x-1">
+                  <span>门店自提热线 / 备货联系电话</span>
+                  <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={pickupPhone}
+                  onChange={(e) => setPickupPhone(e.target.value)}
+                  placeholder="如: 13870011223"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-[#00B578] font-sans font-bold text-gray-900"
+                />
+                <p className="text-[10px] text-gray-400">
+                  用于顾客自提订单凭证展示及提货联系。
+                </p>
+              </div>
             </div>
 
-            {/* 规则一：自提营业与顾客预约规则 */}
+            {/* 规则二：自提营业与顾客预约规则 */}
             <div className="bg-white rounded-2xl p-4 shadow-2xs border border-gray-100/90 space-y-3">
               <div className="flex items-center justify-between border-b border-gray-50 pb-2">
                 <div className="flex items-center space-x-1.5">
                   <Clock className="w-4 h-4 text-[#00B578]" />
-                  <span className="text-xs font-black text-gray-900">规则一：自提营业与预约规则</span>
+                  <span className="text-xs font-black text-gray-900">规则二：自提营业与预约规则</span>
                 </div>
                 <span className="text-[10px] text-emerald-600 bg-emerald-50 font-bold px-1.5 py-0.5 rounded">
                   预约时间控制
                 </span>
               </div>
 
-              {/* 1.1 自提营业时段 */}
+              {/* 2.1 自提营业时段 */}
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-gray-700 flex items-center space-x-1">
                   <span>每日自提营业时段</span>
@@ -231,7 +265,7 @@ export const MerchantProfileView: React.FC<MerchantProfileViewProps> = ({
                 </div>
               </div>
 
-              {/* 1.2 最短备货耗时 (分钟) */}
+              {/* 2.2 最短备货耗时 (分钟) */}
               <div className="space-y-1.5 pt-2 border-t border-gray-50">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-bold text-gray-700">
@@ -263,12 +297,9 @@ export const MerchantProfileView: React.FC<MerchantProfileViewProps> = ({
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-gray-400 leading-snug">
-                  规则机制：顾客下单预约自提时，最早可选时间为【下单时间 + {pickupPrepTimeMinutes}分钟】，避免顾客到店餐品未备好。
-                </p>
               </div>
 
-              {/* 1.3 最长可预约天数 */}
+              {/* 2.3 最长可预约天数 */}
               <div className="space-y-1.5 pt-2 border-t border-gray-50">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-bold text-gray-700">
@@ -301,12 +332,12 @@ export const MerchantProfileView: React.FC<MerchantProfileViewProps> = ({
               </div>
             </div>
 
-            {/* 规则二：自提凭证与有效期规则 */}
+            {/* 规则三：自提凭证与有效期规则 (原规则二，已移除灰色提示框) */}
             <div className="bg-white rounded-2xl p-4 shadow-2xs border border-gray-100/90 space-y-3">
               <div className="flex items-center justify-between border-b border-gray-50 pb-2">
                 <div className="flex items-center space-x-1.5">
                   <Timer className="w-4 h-4 text-[#00B578]" />
-                  <span className="text-xs font-black text-gray-900">规则二：自提凭证与时效规则</span>
+                  <span className="text-xs font-black text-gray-900">规则三：自提凭证与时效规则</span>
                 </div>
                 <span className="text-[10px] text-gray-500 font-mono">6位核销凭证</span>
               </div>
@@ -353,45 +384,18 @@ export const MerchantProfileView: React.FC<MerchantProfileViewProps> = ({
                   ))}
                 </div>
               </div>
-
-              <div className="bg-gray-50 rounded-xl p-2.5 text-[10px] text-gray-500 leading-snug space-y-1">
-                <p>• 顾客下单成功后，系统即刻派发唯一 6 位核销码与动态加密二维码。</p>
-                <p>• 凭证在有效期内保持待核销状态；超过有效期未核销的订单进入逾期未自提状态。</p>
-              </div>
             </div>
 
-            {/* 规则三：核心售后——超时未提退款服务费规则 */}
+            {/* 规则四：超时未提与售后退款规则 (原规则三，已移除黄绿卡片与试算示例) */}
             <div className="bg-white rounded-2xl p-4 shadow-2xs border border-amber-200/70 space-y-3">
               <div className="flex items-center justify-between border-b border-gray-50 pb-2">
                 <div className="flex items-center space-x-1.5">
                   <Percent className="w-4 h-4 text-amber-500" />
-                  <span className="text-xs font-black text-gray-900">规则三：超时未提与售后退款规则</span>
+                  <span className="text-xs font-black text-gray-900">规则四：超时未提与售后退款规则</span>
                 </div>
                 <span className="text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded">
-                  生鲜备货损耗保障
+                  服务费扣除配置
                 </span>
-              </div>
-
-              {/* 核心双时效对比卡片 */}
-              <div className="grid grid-cols-2 gap-2 text-[10px]">
-                <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-2.5 space-y-1">
-                  <div className="font-black text-emerald-900 flex items-center space-x-1">
-                    <CheckCircle2 className="w-3 h-3 text-[#00B578]" />
-                    <span>预约时间前申请退款</span>
-                  </div>
-                  <p className="text-emerald-800 leading-relaxed">
-                    免收任何服务费，系统 <strong className="font-black text-emerald-900">100% 全额原路退还</strong> 给顾客。
-                  </p>
-                </div>
-                <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-2.5 space-y-1">
-                  <div className="font-black text-amber-950 flex items-center space-x-1">
-                    <AlertCircle className="w-3 h-3 text-amber-600" />
-                    <span>超过预约时间申请退款</span>
-                  </div>
-                  <p className="text-amber-900 leading-relaxed">
-                    因商户已按约备货，扣除 <strong className="font-black text-rose-600">{pickupOverdueFeeRate}% 备货损耗费</strong>，划拨给商户。
-                  </p>
-                </div>
               </div>
 
               {/* 扣除比例配置 */}
@@ -413,137 +417,6 @@ export const MerchantProfileView: React.FC<MerchantProfileViewProps> = ({
                   />
                   <span className="absolute right-3 top-2 text-gray-400 font-bold">%</span>
                 </div>
-              </div>
-
-              {/* 快捷比例 */}
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  { rate: 0, label: '0% (全额免扣)' },
-                  { rate: 5, label: '5% 备货损耗' },
-                  { rate: 10, label: '10% (推荐标准)' },
-                  { rate: 15, label: '15% 熟食生鲜' },
-                  { rate: 20, label: '20% 高损耗食材' },
-                  { rate: 30, label: '30% 定制类商品' },
-                ].map((item) => (
-                  <button
-                    key={item.rate}
-                    type="button"
-                    onClick={() => setPickupOverdueFeeRate(item.rate)}
-                    className={`p-1.5 rounded-xl text-center text-[10px] font-medium transition cursor-pointer border ${
-                      pickupOverdueFeeRate === item.rate
-                        ? 'bg-amber-500 text-white font-bold border-amber-500 shadow-2xs'
-                        : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* 试算示例 */}
-              <div className="bg-amber-50/60 rounded-xl p-2.5 border border-amber-200/50 space-y-1">
-                <div className="flex items-center space-x-1 text-[11px] font-bold text-amber-900">
-                  <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>超时退款试算示例 (基于实付 ¥100.00):</span>
-                </div>
-                <div className="grid grid-cols-3 gap-1 text-[10px] text-center pt-1">
-                  <div className="bg-white/80 p-1.5 rounded-lg border border-amber-100">
-                    <span className="text-gray-400 block text-[9px]">顾客实付</span>
-                    <span className="font-bold text-gray-800">¥100.00</span>
-                  </div>
-                  <div className="bg-white/80 p-1.5 rounded-lg border border-rose-100">
-                    <span className="text-rose-500 block text-[9px]">扣除服务费 ({pickupOverdueFeeRate}%)</span>
-                    <span className="font-bold text-rose-600">-¥{(100 * pickupOverdueFeeRate / 100).toFixed(2)}</span>
-                  </div>
-                  <div className="bg-white/80 p-1.5 rounded-lg border border-emerald-100">
-                    <span className="text-emerald-600 block text-[9px]">实退顾客 / 商户补贴</span>
-                    <span className="font-bold text-[#00B578]">¥{(100 * (100 - pickupOverdueFeeRate) / 100).toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 规则四：到店核销与现场调换规则 */}
-            <div className="bg-white rounded-2xl p-4 shadow-2xs border border-gray-100/90 space-y-3">
-              <div className="flex items-center justify-between border-b border-gray-50 pb-2">
-                <div className="flex items-center space-x-1.5">
-                  <Store className="w-4 h-4 text-[#00B578]" />
-                  <span className="text-xs font-black text-gray-900">规则四：到店核销与换货规则</span>
-                </div>
-                <span className="text-[10px] text-gray-400">现场履约</span>
-              </div>
-
-              <div className="space-y-2">
-                {/* 打印设置 Switch */}
-                <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-100">
-                  <div className="space-y-0.5">
-                    <span className="text-xs font-bold text-gray-800 block">提货核销自动打印小票</span>
-                    <span className="text-[10px] text-gray-400">核销码验证成功后自动调用热敏打印机出单</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setPickupAutoPrintReceipt(!pickupAutoPrintReceipt)}
-                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                      pickupAutoPrintReceipt ? 'bg-[#00B578]' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform shadow-xs ${
-                        pickupAutoPrintReceipt ? 'left-5.5' : 'left-0.5'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-2.5 space-y-1 text-[10px] text-gray-500 leading-snug">
-                  <p>• <strong>现场调换保障</strong>：自提顾客到店取货时若选错规格/份量，支持商家在售后中心直接确认现场调换或补差价换货。</p>
-                  <p>• <strong>资金极速结算</strong>：6位提货码一旦在工作台成功核销，订单即时转为完成并释放款项。</p>
-                </div>
-              </div>
-            </div>
-
-            {/* 规则五：门店自提具体地址与提货联系电话 */}
-            <div className="bg-white rounded-2xl p-4 shadow-2xs border border-gray-100/90 space-y-3">
-              <div className="flex items-center justify-between border-b border-gray-50 pb-2">
-                <div className="flex items-center space-x-1.5">
-                  <MapPin className="w-4 h-4 text-[#00B578]" />
-                  <span className="text-xs font-black text-gray-900">规则五：门店自提地址与联系方式</span>
-                </div>
-                <span className="text-[10px] text-rose-500 font-bold">* 必填信息</span>
-              </div>
-
-              {/* 门店自提地址 */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-gray-700">
-                  门店自提具体地址及提货方位指引 <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  rows={2}
-                  required
-                  value={pickupAddress}
-                  onChange={(e) => setPickupAddress(e.target.value)}
-                  placeholder="如: 红谷滩区绿茵路88号临街商铺 (老街坊生鲜大厅服务台)..."
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs outline-none focus:border-[#00B578] focus:bg-white text-gray-800 transition"
-                />
-              </div>
-
-              {/* 门店自提联系电话 */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-gray-700 flex items-center space-x-1">
-                  <span>门店自提热线 / 备货联系电话</span>
-                  <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={pickupPhone}
-                  onChange={(e) => setPickupPhone(e.target.value)}
-                  placeholder="如: 13870011223"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-[#00B578] font-sans font-bold text-gray-900"
-                />
-                <p className="text-[10px] text-gray-400">
-                  用于顾客自提订单凭证展示及超时提前电话提醒。
-                </p>
               </div>
             </div>
           </div>

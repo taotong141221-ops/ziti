@@ -16,6 +16,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { Order } from '../../types';
+import { formatPickupTimePoint } from '../merchant/MerchantOrdersView';
 
 interface OrderExceptionViewProps {
   orders: Order[];
@@ -30,6 +31,7 @@ export interface ExceptionItem {
   typeName: string;
   severity: 'high' | 'medium' | 'low';
   orderTime: string;
+  pickupTime?: string;
   durationText: string;
   description: string;
   payAmount: number;
@@ -45,6 +47,7 @@ const INITIAL_EXCEPTIONS: ExceptionItem[] = [
     typeName: '商家接单超时 (>5min)',
     severity: 'high',
     orderTime: '2026-08-28 10:14:00',
+    pickupTime: '18:40',
     durationText: '已超时 7 分钟',
     description: '顾客已支付但商家后厨/店员未在5分钟规定时限内确认接单，请及时催单或触发兜底退款。',
     payAmount: 64.9,
@@ -58,6 +61,7 @@ const INITIAL_EXCEPTIONS: ExceptionItem[] = [
     typeName: '自提提货码逾期未领 (>48h)',
     severity: 'low',
     orderTime: '2026-08-26 09:00:00',
+    pickupTime: '17:15',
     durationText: '已逾期 50 小时',
     description: '顾客未按时到店出示提货码【728190】，生鲜冷藏商品已由门店暂存在自提保鲜柜。',
     payAmount: 35.8,
@@ -71,6 +75,7 @@ const INITIAL_EXCEPTIONS: ExceptionItem[] = [
     typeName: '门店商品临时缺货',
     severity: 'medium',
     orderTime: '2026-08-28 11:05:00',
+    pickupTime: '12:30',
     durationText: '待协商换货/退款',
     description: '商家备餐发现指定特色小料已售罄，正联系顾客进行换品确认或部分差额退款。',
     payAmount: 28.5,
@@ -236,6 +241,7 @@ export const OrderExceptionView: React.FC<OrderExceptionViewProps> = ({
               <tr className="bg-slate-50/90 text-slate-500 font-bold border-b border-slate-200">
                 <th className="py-3 px-4 min-w-[150px] whitespace-nowrap">订单号</th>
                 <th className="py-3 px-3 min-w-[140px] whitespace-nowrap">异常时间</th>
+                <th className="py-3 px-3 min-w-[110px] whitespace-nowrap">提货时间</th>
                 <th className="py-3 px-3 min-w-[130px] whitespace-nowrap">涉及商户</th>
                 <th className="py-3 px-3 min-w-[180px] whitespace-nowrap">异常类型与级别</th>
                 <th className="py-3 px-3 min-w-[120px] whitespace-nowrap">超时/滞留时长</th>
@@ -251,30 +257,48 @@ export const OrderExceptionView: React.FC<OrderExceptionViewProps> = ({
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {filteredExceptions.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                  <td colSpan={10} className="py-12 text-center text-slate-400">
                     当前暂无待处理的履约异常订单
                   </td>
                 </tr>
               ) : (
-                filteredExceptions.map((ex) => (
-                  <tr key={ex.id} className="hover:bg-slate-50/70 transition-colors">
-                    {/* 订单号 (已删除 异常流水/ 字样) */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="font-mono font-bold text-slate-900 text-xs">{ex.orderNo}</div>
-                    </td>
+                filteredExceptions.map((ex) => {
+                  const matchedOrder = orders.find((o) => o.orderNo === ex.orderNo);
+                  const displayPickupTime = formatPickupTimePoint(
+                    matchedOrder?.fulfillment?.selectedPickupTime ||
+                      matchedOrder?.selectedPickupTime ||
+                      matchedOrder?.fulfillment?.pickupTime ||
+                      matchedOrder?.pickupTime ||
+                      ex.pickupTime ||
+                      '18:40'
+                  );
 
-                    {/* 异常时间 (分开单独展示) */}
-                    <td className="py-3.5 px-3 whitespace-nowrap">
-                      <div className="font-mono text-xs text-slate-600">{ex.orderTime}</div>
-                    </td>
+                  return (
+                    <tr key={ex.id} className="hover:bg-slate-50/70 transition-colors">
+                      {/* 订单号 (已删除 异常流水/ 字样) */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="font-mono font-bold text-slate-900 text-xs">{ex.orderNo}</div>
+                      </td>
 
-                    {/* 涉及商户 */}
-                    <td className="py-3.5 px-3">
-                      <div className="font-bold text-slate-800 flex items-center space-x-1">
-                        <Store className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate max-w-[120px]" title={ex.merchantName}>{ex.merchantName}</span>
-                      </div>
-                    </td>
+                      {/* 异常时间 (分开单独展示) */}
+                      <td className="py-3.5 px-3 whitespace-nowrap">
+                        <div className="font-mono text-xs text-slate-600">{ex.orderTime}</div>
+                      </td>
+
+                      {/* 提货时间 */}
+                      <td className="py-3.5 px-3 whitespace-nowrap">
+                        <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50/80 px-2 py-0.5 rounded-md border border-emerald-200/60 inline-block">
+                          {displayPickupTime}
+                        </span>
+                      </td>
+
+                      {/* 涉及商户 */}
+                      <td className="py-3.5 px-3">
+                        <div className="font-bold text-slate-800 flex items-center space-x-1">
+                          <Store className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[120px]" title={ex.merchantName}>{ex.merchantName}</span>
+                        </div>
+                      </td>
 
                     {/* 异常类型与级别：标签和文字展示两排 */}
                     <td className="py-3.5 px-3">
@@ -381,8 +405,9 @@ export const OrderExceptionView: React.FC<OrderExceptionViewProps> = ({
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })
+            )}
             </tbody>
           </table>
         </div>

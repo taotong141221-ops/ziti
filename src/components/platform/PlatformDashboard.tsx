@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  FolderTree,
   Truck,
   ShoppingBag,
   BarChart3,
@@ -19,14 +18,12 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Order, MerchantConfig, Product } from '../../types';
-import { CategoryManageView } from './CategoryManageView';
 import { OrderInspectView } from './OrderInspectView';
 import { OrderExceptionView } from './OrderExceptionView';
 import { RefundAuditView } from './RefundAuditView';
 import { BasicDataAnalyticsView } from './BasicDataAnalyticsView';
 
 export type AdminMenuKey =
-  | 'categories' // 商家分类
   | 'orders_view' // 订单管理 -> 订单查看
   | 'orders_exception' // 订单管理 -> 异常处理
   | 'orders_refund' // 订单管理 -> 退款审核
@@ -54,7 +51,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({
   onConfirmReceivedAndRefund,
 }) => {
   // Default active menu
-  const [activeMenu, setActiveMenu] = useState<AdminMenuKey>('categories');
+  const [activeMenu, setActiveMenu] = useState<AdminMenuKey>('orders_view');
 
   // Expanded menu sections state (orders group)
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
@@ -78,8 +75,6 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({
   // Breadcrumb text resolver
   const getBreadcrumb = () => {
     switch (activeMenu) {
-      case 'categories':
-        return { primary: '商家分类', sub: '' };
       case 'orders_view':
         return { primary: '订单管理', sub: '订单查看' };
       case 'orders_exception':
@@ -113,22 +108,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({
 
           {/* Structured Menu Tree */}
           <nav className="p-3 space-y-1.5">
-            {/* 1. 商家分类 (Menu Item) */}
-            <div>
-              <button
-                onClick={() => setActiveMenu('categories')}
-                className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  activeMenu === 'categories'
-                    ? 'bg-emerald-600 text-white shadow-sm font-black'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/70'
-                }`}
-              >
-                <FolderTree className="w-4 h-4" />
-                <span>商家分类</span>
-              </button>
-            </div>
-
-            {/* 2. 订单管理 (Group with 3 Sub-items) */}
+            {/* 1. 订单管理 (Group with 3 Sub-items) */}
             <div className="space-y-1">
               <button
                 onClick={() => {
@@ -278,12 +258,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({
         {/* View Content Viewport */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto">
-            {/* 1. 商家分类 */}
-            {activeMenu === 'categories' && (
-              <CategoryManageView products={products} merchants={merchants} />
-            )}
-
-            {/* 2. 订单管理 -> 订单查看 */}
+            {/* 1. 订单管理 -> 订单查看 */}
             {activeMenu === 'orders_view' && (
               <OrderInspectView orders={orders} />
             )}

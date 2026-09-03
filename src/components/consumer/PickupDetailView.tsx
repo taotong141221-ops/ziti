@@ -188,16 +188,18 @@ export const PickupDetailView: React.FC<PickupDetailViewProps> = ({
             </div>
           )}
 
-          {/* 预约自提时间 (唯一保留，放在核销码上面) */}
-          <div className="bg-[#F8FAF9] border border-gray-100 rounded-xl p-2.5 flex items-center justify-between text-xs">
-            <div className="flex items-center space-x-1.5 text-gray-700">
-              <Clock className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span className="font-bold">自提时间:</span>
+          {/* 预约自提时间 (唯一保留，放在核销码上面，已退款状态不展示) */}
+          {order.orderStatus !== 'refunded' && (
+            <div className="bg-[#F8FAF9] border border-gray-100 rounded-xl p-2.5 flex items-center justify-between text-xs">
+              <div className="flex items-center space-x-1.5 text-gray-700">
+                <Clock className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="font-bold">自提时间:</span>
+              </div>
+              <span className="font-black text-emerald-700 font-mono text-sm">
+                {formatPickupTimePoint(order.selectedPickupTime || order.createTime)}
+              </span>
             </div>
-            <span className="font-black text-emerald-700 font-mono text-sm">
-              {formatPickupTimePoint(order.selectedPickupTime || order.createTime)}
-            </span>
-          </div>
+          )}
 
           {/* Pickup Code Display */}
           <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl py-3.5 px-4 flex flex-col items-center justify-center">
@@ -253,6 +255,17 @@ export const PickupDetailView: React.FC<PickupDetailViewProps> = ({
               <Store className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-xs font-black text-gray-900">{order.merchantName}</h3>
+                <div className="mt-1 flex items-center">
+                  <span
+                    className={`text-[9px] px-1.5 py-0.2 rounded font-bold shrink-0 ${
+                      order.channel === 'offline'
+                        ? 'bg-purple-50 text-purple-700 border border-purple-200/70'
+                        : 'bg-blue-50 text-blue-700 border border-blue-200/70'
+                    }`}
+                  >
+                    {order.channel === 'offline' ? '线下' : '线上'}
+                  </span>
+                </div>
                 <div className="flex items-center space-x-1.5 mt-1">
                   <p className="text-[11px] text-gray-600 leading-snug truncate">
                     {order.merchantAddress}
@@ -475,7 +488,7 @@ export const PickupDetailView: React.FC<PickupDetailViewProps> = ({
           </button>
         )}
 
-        {/* 待自提: 申请退款 (触发售后弹窗，超时扣10%服务费) */}
+        {/* 待自提: 申请售后 */}
         {order.orderStatus === 'ready_pickup' && (
           <button
             type="button"
@@ -483,7 +496,7 @@ export const PickupDetailView: React.FC<PickupDetailViewProps> = ({
             className="flex-1 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 transition cursor-pointer"
             id={`btn-detail-apply-aftersale-pickup-${order.orderNo}`}
           >
-            {isOverdue ? '申请退款 (扣10%服务费)' : '申请退款'}
+            申请售后
           </button>
         )}
 

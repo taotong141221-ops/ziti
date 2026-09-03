@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Clock,
   RotateCcw,
+  Edit3,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { MerchantOrderItem, formatPickupTimePoint } from './MerchantOrdersView';
@@ -21,6 +22,7 @@ interface OrderDetailModalProps {
   onPrintReceipt: (order: MerchantOrderItem) => void;
   onVerifyPickup: (order: MerchantOrderItem) => void;
   onMarkReady?: (order: MerchantOrderItem) => void;
+  onModifyPrice?: (order: MerchantOrderItem) => void;
 }
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
@@ -29,6 +31,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   onPrintReceipt,
   onVerifyPickup,
   onMarkReady,
+  onModifyPrice,
 }) => {
   const [copiedNo, setCopiedNo] = useState(false);
 
@@ -41,6 +44,14 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   };
 
   const renderStatusBadge = () => {
+    if (order.isUnpaid || order.statusText === '待付款') {
+      return (
+        <span className="bg-rose-50 text-rose-600 border border-rose-200 text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-1 shrink-0 animate-pulse">
+          <Clock className="w-3 h-3 text-rose-500" />
+          <span>待付款</span>
+        </span>
+      );
+    }
     if (order.isRefunded) {
       return (
         <span className="bg-rose-50 text-rose-600 border border-rose-200 text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center space-x-1 shrink-0">
@@ -205,9 +216,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           <div className="bg-gray-50 rounded-2xl p-3 space-y-1 text-xs text-gray-700">
             <div className="flex items-center justify-between">
               <span className="font-black text-gray-900">{order.customerName}</span>
-              <span className="font-mono text-gray-600 flex items-center space-x-1">
-                <Phone className="w-3 h-3 text-gray-400" />
+              <span className="font-mono text-gray-700 flex items-center space-x-1 font-bold">
                 <span>{order.customerPhone || '138****5621'}</span>
+                <Phone className="w-3.5 h-3.5 text-[#00B578]" />
               </span>
             </div>
           </div>
@@ -282,8 +293,15 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             </span>
           </div>
           <div className="flex justify-between items-baseline pt-2 border-t border-gray-200 text-gray-900">
-            <span className="font-bold">顾客实付金额</span>
-            <span className="text-base font-black text-[#00B578] font-sans">
+            <div>
+              <span className="font-bold">顾客应付/实付金额</span>
+              {order.isPriceModified && (
+                <div className="text-[10px] text-blue-600 font-normal">
+                  已改价 (原需付 ¥{order.originalPayAmount?.toFixed(2)})
+                </div>
+              )}
+            </div>
+            <span className="text-base font-black text-rose-600 font-sans">
               ¥{order.payAmount.toFixed(2)}
             </span>
           </div>
@@ -300,7 +318,19 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             <span>打印小票</span>
           </button>
 
-          {!order.isRefunded && (
+          {(order.isUnpaid || order.statusText === '待付款') ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onModifyPrice?.(order);
+              }}
+              className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center space-x-1.5 transition cursor-pointer"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>修改订单价格</span>
+            </button>
+          ) : !order.isRefunded ? (
             <>
               {order.channel !== 'offline' && order.pickupStatus !== 'completed' ? (
                 <button
@@ -324,6 +354,14 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </button>
               )}
             </>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs flex items-center justify-center transition cursor-pointer"
+            >
+              关闭
+            </button>
           )}
         </div>
       </motion.div>
