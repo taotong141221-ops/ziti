@@ -1,0 +1,8 @@
+{
+  "name": "Remix 本地生活·社区购高保真原型交互系统",
+  "description": "基于PRD需求规范与UI设计规范构建的本地生活社区购全链路高保真原型（C端消费者、B端商家工作台、平台管理与五方分账演算台）",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
