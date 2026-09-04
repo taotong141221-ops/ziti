@@ -194,7 +194,6 @@ export const StoreView: React.FC<StoreViewProps> = ({
                     <p className="text-[10px] text-gray-400 truncate mt-0.5">{product.subtitle}</p>
                     <div className="text-[10px] text-gray-500 mt-1 flex items-center space-x-2">
                       <span>已售 {product.totalSold}</span>
-                      <span>余量 {defaultSku.stock - defaultSku.frozenStock}</span>
                     </div>
                   </div>
 

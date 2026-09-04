@@ -19,13 +19,11 @@ import {
 } from 'lucide-react';
 import { Order, MerchantConfig, Product } from '../../types';
 import { OrderInspectView } from './OrderInspectView';
-import { OrderExceptionView } from './OrderExceptionView';
 import { RefundAuditView } from './RefundAuditView';
 import { BasicDataAnalyticsView } from './BasicDataAnalyticsView';
 
 export type AdminMenuKey =
   | 'orders_view' // 订单管理 -> 订单查看
-  | 'orders_exception' // 订单管理 -> 异常处理
   | 'orders_refund' // 订单管理 -> 退款审核
   | 'analytics'; // 基础数据 (交易额、订单量分析)
 
@@ -70,15 +68,11 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({
     (o) => o.afterSale?.status === 'pending' || (o.orderStatus === 'aftersale' && !o.afterSale)
   ).length;
 
-  const exceptionCount = 4; // active exceptions
-
   // Breadcrumb text resolver
   const getBreadcrumb = () => {
     switch (activeMenu) {
       case 'orders_view':
         return { primary: '订单管理', sub: '订单查看' };
-      case 'orders_exception':
-        return { primary: '订单管理', sub: '异常处理' };
       case 'orders_refund':
         return { primary: '订单管理', sub: '退款审核' };
       case 'analytics':
@@ -128,7 +122,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({
                   <span>订单管理</span>
                 </div>
                 <div className="flex items-center space-x-1.5">
-                  {(pendingRefundCount > 0 || exceptionCount > 0) && (
+                  {pendingRefundCount > 0 && (
                     <span className="w-2 h-2 rounded-full bg-rose-500" />
                   )}
                   {expandedSections.orders ? (
@@ -151,25 +145,6 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
                     <span>订单查看</span>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveMenu('orders_exception')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
-                      activeMenu === 'orders_exception'
-                        ? 'bg-emerald-600 text-white font-bold shadow-xs'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-2.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
-                      <span>异常处理</span>
-                    </div>
-                    {exceptionCount > 0 && (
-                      <span className="bg-rose-500/90 text-white text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full">
-                        {exceptionCount}
-                      </span>
-                    )}
                   </button>
 
                   <button
@@ -263,15 +238,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({
               <OrderInspectView orders={orders} />
             )}
 
-            {/* 4. 订单管理 -> 异常处理 */}
-            {activeMenu === 'orders_exception' && (
-              <OrderExceptionView
-                orders={orders}
-                onInterveneRefund={onInterveneRefund}
-              />
-            )}
-
-            {/* 5. 订单管理 -> 退款审核 */}
+            {/* 2. 订单管理 -> 退款审核 */}
             {activeMenu === 'orders_refund' && (
               <RefundAuditView
                 orders={orders}

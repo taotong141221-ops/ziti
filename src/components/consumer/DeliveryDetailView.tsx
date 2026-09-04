@@ -424,10 +424,10 @@ export const DeliveryDetailView: React.FC<DeliveryDetailViewProps> = ({
               <span>社区配送费</span>
               <span className="font-bold text-gray-900">¥{order.deliveryFee.toFixed(2)}</span>
             </div>
-            {((order.discountAmount ?? 0) > 0 || (order.couponDiscountAmount ?? 0) > 0) && (
+            {((order.discountAmount ?? 0) > 0 || (order.couponDiscountAmount ?? 0) > 0 || (order.rebateDiscount ?? 0) > 0) && (
               <div className="flex justify-between text-emerald-600 font-medium">
                 <span>优惠抵扣金额</span>
-                <span>-¥{(order.discountAmount ?? order.couponDiscountAmount ?? 0).toFixed(2)}</span>
+                <span>-¥{(order.discountAmount || order.couponDiscountAmount || order.rebateDiscount || 0).toFixed(2)}</span>
               </div>
             )}
             {order.pointDeductAmount > 0 && (

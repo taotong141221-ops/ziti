@@ -19,6 +19,8 @@ import {
   Store,
   User,
   ExternalLink,
+  AlertTriangle,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { Order } from '../../types';
 import { formatPickupTimePoint } from '../merchant/MerchantOrdersView';
@@ -42,12 +44,33 @@ export const RefundAuditView: React.FC<RefundAuditViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  // Reject Modal State
-  const [rejectingOrderNo, setRejectingOrderNo] = useState<string | null>(null);
+  // Quick rejection reasons presets
+  const QUICK_REJECT_PRESETS = [
+    '商品已正常自提消费完毕，无质量问题',
+    '已超过平台售后有效受理时效（48小时）',
+    '生鲜即食食品非质量问题不予退货退款',
+    '买家未按约定时间自提且门店已备餐完成',
+    '商品实物及外包装完好，买家个人原因申请',
+  ];
+
+  // Reject Modal State (Step 1: Fill Reason)
+  const [rejectModalOrder, setRejectModalOrder] = useState<Order | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
   // Detail Modal State
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // Evidence photo preview modal
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  // Secondary Confirmation Modal State (Step 2: Mandatory 2nd Confirm for ALL Operations)
+  type AuditConfirmType = 'approve' | 'reject' | 'confirm_received_refund' | 'intervene_refund';
+  interface AuditConfirmAction {
+    type: AuditConfirmType;
+    order: Order;
+    rejectReason?: string;
+  }
+  const [pendingConfirmAction, setPendingConfirmAction] = useState<AuditConfirmAction | null>(null);
 
   // Aftersale orders list
   const afterSaleOrders = orders.filter(
@@ -88,17 +111,75 @@ export const RefundAuditView: React.FC<RefundAuditViewProps> = ({
     return matchSearch && matchStatus && matchType;
   });
 
-  const handleConfirmReject = () => {
-    if (!rejectingOrderNo) return;
+  // Action Triggers -> Mandatorily open Secondary Confirmation
+  const triggerApprove = (order: Order) => {
+    setPendingConfirmAction({
+      type: 'approve',
+      order,
+    });
+  };
+
+  const triggerRejectInput = (order: Order) => {
+    setRejectModalOrder(order);
+    if (!rejectReason) {
+      setRejectReason(QUICK_REJECT_PRESETS[0]);
+    }
+  };
+
+  const handleProceedToRejectConfirm = () => {
+    if (!rejectModalOrder) return;
     if (!rejectReason.trim()) {
-      alert('请填写驳回原因说明！');
+      alert('请填写或选择驳回原因！');
       return;
     }
-    if (onRejectAfterSale) {
-      onRejectAfterSale(rejectingOrderNo, rejectReason.trim());
+    setPendingConfirmAction({
+      type: 'reject',
+      order: rejectModalOrder,
+      rejectReason: rejectReason.trim(),
+    });
+    setRejectModalOrder(null);
+  };
+
+  const triggerConfirmReceivedRefund = (order: Order) => {
+    setPendingConfirmAction({
+      type: 'confirm_received_refund',
+      order,
+    });
+  };
+
+  const triggerInterveneRefund = (order: Order) => {
+    setPendingConfirmAction({
+      type: 'intervene_refund',
+      order,
+    });
+  };
+
+  // Final execution after secondary confirmation is confirmed
+  const handleExecuteConfirmedAction = () => {
+    if (!pendingConfirmAction) return;
+    const { type, order, rejectReason: finalReason } = pendingConfirmAction;
+
+    if (type === 'approve') {
+      if (onApproveAfterSale) {
+        onApproveAfterSale(order.orderNo);
+      }
+    } else if (type === 'reject') {
+      if (onRejectAfterSale) {
+        onRejectAfterSale(order.orderNo, finalReason || '经审核不符合退款条件');
+      }
+      setRejectReason('');
+    } else if (type === 'confirm_received_refund') {
+      if (onConfirmReceivedAndRefund) {
+        onConfirmReceivedAndRefund(order.orderNo);
+      }
+    } else if (type === 'intervene_refund') {
+      if (onInterveneRefund) {
+        onInterveneRefund(order.orderNo);
+      }
     }
-    setRejectingOrderNo(null);
-    setRejectReason('');
+
+    setPendingConfirmAction(null);
+    setSelectedOrder(null);
   };
 
   return (
@@ -411,16 +492,26 @@ export const RefundAuditView: React.FC<RefundAuditViewProps> = ({
                       {/* 13. 操作固定在最右侧 */}
                       <td className="py-3.5 px-4 text-right sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.06)] z-10 whitespace-nowrap">
                         <div className="flex items-center justify-end space-x-1.5">
+                          {/* 详情查看 */}
+                          <button
+                            onClick={() => setSelectedOrder(o)}
+                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center space-x-1"
+                            title="查看售后详情"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>详情</span>
+                          </button>
+
                           {isPending && (
                             <>
                               <button
-                                onClick={() => onApproveAfterSale && onApproveAfterSale(o.orderNo)}
+                                onClick={() => triggerApprove(o)}
                                 className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition cursor-pointer shadow-2xs"
                               >
                                 通过
                               </button>
                               <button
-                                onClick={() => setRejectingOrderNo(o.orderNo)}
+                                onClick={() => triggerRejectInput(o)}
                                 className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/60 rounded-lg text-[11px] font-bold transition cursor-pointer"
                               >
                                 驳回
@@ -430,10 +521,7 @@ export const RefundAuditView: React.FC<RefundAuditViewProps> = ({
 
                           {isShipped && (
                             <button
-                              onClick={() =>
-                                onConfirmReceivedAndRefund &&
-                                onConfirmReceivedAndRefund(o.orderNo)
-                              }
+                              onClick={() => triggerConfirmReceivedRefund(o)}
                               className="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[11px] font-bold transition cursor-pointer shadow-2xs"
                             >
                               验货并退款
@@ -441,9 +529,20 @@ export const RefundAuditView: React.FC<RefundAuditViewProps> = ({
                           )}
 
                           {isWaitingShip && (
-                            <span className="text-[11px] text-blue-600 font-medium">
-                              等待买家寄回
-                            </span>
+                            <div className="flex items-center space-x-1">
+                              <span className="text-[11px] text-blue-600 font-medium">
+                                待买家寄回
+                              </span>
+                              {onInterveneRefund && (
+                                <button
+                                  onClick={() => triggerInterveneRefund(o)}
+                                  className="px-2 py-0.5 text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/60 rounded-md transition cursor-pointer"
+                                  title="平台介入直接退款"
+                                >
+                                  介入退款
+                                </button>
+                              )}
+                            </div>
                           )}
 
                           {isCompleted && (
@@ -454,9 +553,20 @@ export const RefundAuditView: React.FC<RefundAuditViewProps> = ({
                           )}
 
                           {isRejected && (
-                            <span className="text-[11px] text-slate-400 font-medium">
-                              已驳回申请
-                            </span>
+                            <div className="flex items-center space-x-1">
+                              <span className="text-[11px] text-slate-400 font-medium">
+                                已驳回
+                              </span>
+                              {onInterveneRefund && (
+                                <button
+                                  onClick={() => triggerInterveneRefund(o)}
+                                  className="px-2 py-0.5 text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/60 rounded-md transition cursor-pointer"
+                                  title="争议申诉：平台介入退款"
+                                >
+                                  介入退款
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>
@@ -469,47 +579,558 @@ export const RefundAuditView: React.FC<RefundAuditViewProps> = ({
         </div>
       </div>
 
-      {/* 驳回原因弹窗 Modal */}
-      {rejectingOrderNo && (
+      {/* 1. 驳回售后退款申请弹窗 (Step 1: 录入驳回理由) */}
+      {rejectModalOrder && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-900">驳回售后退款申请</h3>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
+                  <XCircle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">驳回售后退款申请</h3>
+                  <p className="text-[11px] text-slate-400">第一步：请填写驳回原因说明</p>
+                </div>
+              </div>
               <button
-                onClick={() => setRejectingOrderNo(null)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                onClick={() => setRejectModalOrder(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-2">
+            {/* 订单摘要卡片 */}
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1.5 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">售后编号：</span>
+                <span className="font-mono font-bold text-slate-800">{getAfterSaleNo(rejectModalOrder)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">申请退款额：</span>
+                <span className="font-mono font-bold text-rose-600">
+                  ¥{(rejectModalOrder.afterSale?.refundAmount || rejectModalOrder.payAmount).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">买家申请原因：</span>
+                <span className="text-slate-700 truncate max-w-[240px]">
+                  {rejectModalOrder.afterSale?.reason || rejectModalOrder.aftersaleReason || '买家申请售后退款'}
+                </span>
+              </div>
+            </div>
+
+            {/* 快捷理由预设 */}
+            <div className="space-y-1.5">
               <label className="text-xs text-slate-700 font-bold block">
-                驳回原因说明 <span className="text-rose-500">*</span>
+                快捷选择常见驳回理由：
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_REJECT_PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setRejectReason(preset)}
+                    className={`text-[11px] px-2.5 py-1 rounded-lg border transition text-left cursor-pointer ${
+                      rejectReason === preset
+                        ? 'bg-rose-50 border-rose-300 text-rose-700 font-bold'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 详细驳回原因输入框 */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-slate-700 font-bold block">
+                驳回原因详细说明 <span className="text-rose-500">*</span>
               </label>
               <textarea
                 rows={3}
-                placeholder="请详细填写驳回理由（如：商品无质量问题、已过售后时效、未提前联系门店等），买家端将同步查看此说明..."
+                placeholder="请详细填写驳回理由，买家端将同步查阅此说明..."
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-rose-500"
               />
             </div>
 
-            <div className="flex justify-end space-x-2 pt-2">
+            <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
               <button
-                onClick={() => setRejectingOrderNo(null)}
-                className="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                type="button"
+                onClick={() => setRejectModalOrder(null)}
+                className="px-3.5 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 cursor-pointer"
               >
                 取消
               </button>
               <button
-                onClick={handleConfirmReject}
-                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                type="button"
+                onClick={handleProceedToRejectConfirm}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center space-x-1"
               >
-                确认驳回
+                <span>下一步：二次确认驳回</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. 【核心】所有退款审核操作的“二次确认”统一弹窗 Modal */}
+      {pendingConfirmAction && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
+            {/* 弹窗顶部标示与操作警示 */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-3">
+                {pendingConfirmAction.type === 'approve' && (
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                )}
+                {pendingConfirmAction.type === 'reject' && (
+                  <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                )}
+                {pendingConfirmAction.type === 'confirm_received_refund' && (
+                  <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 shrink-0">
+                    <Truck className="w-6 h-6" />
+                  </div>
+                )}
+                {pendingConfirmAction.type === 'intervene_refund' && (
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
+                    <RotateCcw className="w-6 h-6" />
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-base font-black text-slate-900">
+                      {pendingConfirmAction.type === 'approve' && '二次确认：确认审核通过此售后申请？'}
+                      {pendingConfirmAction.type === 'reject' && '二次确认：确认驳回此售后退款申请？'}
+                      {pendingConfirmAction.type === 'confirm_received_refund' && '二次确认：确认验货通过并原路退款？'}
+                      {pendingConfirmAction.type === 'intervene_refund' && '二次确认：平台介入强制全额退款？'}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    请仔细核对以下售后工单明细与操作影响，确认后将立即执行
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setPendingConfirmAction(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* 工单核验卡片 */}
+            <div className="bg-slate-50/90 rounded-2xl p-4 border border-slate-200/80 space-y-2.5 text-xs">
+              <div className="grid grid-cols-2 gap-2 text-slate-600">
+                <div>
+                  <span className="text-slate-400 block text-[11px]">售后工单号</span>
+                  <span className="font-mono font-bold text-slate-900">
+                    {getAfterSaleNo(pendingConfirmAction.order)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">关联订单号</span>
+                  <span className="font-mono font-bold text-slate-800">
+                    {pendingConfirmAction.order.orderNo}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">买家信息</span>
+                  <span className="font-medium text-slate-800">
+                    {pendingConfirmAction.order.fulfillment?.receiverName || pendingConfirmAction.order.address?.receiverName || '买家顾客'}
+                    {' '}
+                    <span className="text-slate-400 font-mono">
+                      ({pendingConfirmAction.order.fulfillment?.receiverPhone || pendingConfirmAction.order.address?.phone || '自提'})
+                    </span>
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">涉及商户门店</span>
+                  <span className="font-medium text-slate-800 truncate block">
+                    {pendingConfirmAction.order.merchantName}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">售后类型</span>
+                  <span className="font-bold text-slate-800">
+                    {getNormalizedType(pendingConfirmAction.order) === 'return' ? '退货退款' : getNormalizedType(pendingConfirmAction.order) === 'exchange' ? '换货' : '仅退款'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">申请退款金额</span>
+                  <span className="font-mono font-black text-rose-600 text-sm">
+                    ¥{(pendingConfirmAction.order.afterSale?.refundAmount || pendingConfirmAction.order.payAmount).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* 买家申请原因 */}
+              <div className="pt-2 border-t border-slate-200/60">
+                <span className="text-slate-400 block text-[11px]">买家申请理由：</span>
+                <span className="text-slate-700 font-medium">
+                  {pendingConfirmAction.order.afterSale?.reason || pendingConfirmAction.order.aftersaleReason || '买家申请退款'}
+                  {pendingConfirmAction.order.afterSale?.description && (
+                    <span className="text-slate-500 block text-[11px] mt-0.5">
+                      补充说明：{pendingConfirmAction.order.afterSale.description}
+                    </span>
+                  )}
+                </span>
+              </div>
+
+              {/* 驳回操作专有：展示驳回原因 */}
+              {pendingConfirmAction.type === 'reject' && (
+                <div className="pt-2 border-t border-rose-100 bg-rose-50/70 p-2.5 rounded-xl border">
+                  <span className="text-rose-600 font-bold block text-[11px]">
+                    本次审核驳回原因 (买家端将同步显示)：
+                  </span>
+                  <p className="text-rose-950 font-bold mt-1 text-xs">
+                    “{pendingConfirmAction.rejectReason}”
+                  </p>
+                </div>
+              )}
+
+              {/* 验货退款专有：展示退货物流 */}
+              {pendingConfirmAction.type === 'confirm_received_refund' && (
+                <div className="pt-2 border-t border-teal-100 bg-teal-50/70 p-2.5 rounded-xl border">
+                  <span className="text-teal-700 font-bold block text-[11px]">
+                    买家寄回运单：
+                  </span>
+                  <div className="font-mono font-bold text-teal-950 mt-0.5">
+                    {pendingConfirmAction.order.afterSale?.returnCourier || '顺丰速运'} · {pendingConfirmAction.order.afterSale?.returnTrackingNo || '已寄出'}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 操作不可逆提示条 */}
+            <div className={`p-3 rounded-xl text-xs font-medium border ${
+              pendingConfirmAction.type === 'reject'
+                ? 'bg-rose-50 text-rose-800 border-rose-200'
+                : pendingConfirmAction.type === 'intervene_refund'
+                ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                : 'bg-amber-50 text-amber-800 border-amber-200'
+            }`}>
+              {pendingConfirmAction.type === 'approve' && (
+                <div>
+                  <p className="font-bold">⚠️ 操作提示：</p>
+                  {getNormalizedType(pendingConfirmAction.order) === 'refund' || pendingConfirmAction.order.fulfillType === 'pickup' ? (
+                    <p className="mt-0.5">
+                      审核通过后，系统将<strong>立即原路退款 ¥{(pendingConfirmAction.order.afterSale?.refundAmount || pendingConfirmAction.order.payAmount).toFixed(2)}</strong> 给买家支付账户。<strong>此操作不可撤销</strong>，请仔细核验！
+                    </p>
+                  ) : (
+                    <p className="mt-0.5">
+                      审核通过后，将同意买家退货申请并通知买家将商品原包装寄回。待买家寄出并验货无误后，再行触发退款。
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {pendingConfirmAction.type === 'reject' && (
+                <div>
+                  <p className="font-bold">🚨 严重警示：</p>
+                  <p className="mt-0.5">
+                    确认驳回后，该售后工单将被<strong>正式关闭</strong>，系统不再自动执行退款，买家端将同步显示驳回原因。请确认已与买家或门店沟通清楚。
+                  </p>
+                </div>
+              )}
+
+              {pendingConfirmAction.type === 'confirm_received_refund' && (
+                <div>
+                  <p className="font-bold">⚠️ 验货退款提示：</p>
+                  <p className="mt-0.5">
+                    请确认仓库或门店已实物收到买家退回的包裹，且商品查验完好无损。确认后将<strong>立即向买家原路退款 ¥{(pendingConfirmAction.order.afterSale?.refundAmount || pendingConfirmAction.order.payAmount).toFixed(2)}</strong>，不可撤销。
+                  </p>
+                </div>
+              )}
+
+              {pendingConfirmAction.type === 'intervene_refund' && (
+                <div>
+                  <p className="font-bold">⚡ 管理员特权操作：</p>
+                  <p className="mt-0.5">
+                    平台管理员介入将跳过商户与常规退换货审核流程，直接为订单执行<strong>全额原路退款 ¥{pendingConfirmAction.order.payAmount.toFixed(2)}</strong>，并完结争议工单。
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 二次确认操作按钮 */}
+            <div className="flex items-center justify-end space-x-2.5 pt-1">
+              {pendingConfirmAction.type === 'reject' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRejectModalOrder(pendingConfirmAction.order);
+                      setPendingConfirmAction(null);
+                    }}
+                    className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                  >
+                    返回修改原因
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExecuteConfirmedAction}
+                    className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center space-x-1"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>确认驳回申请</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setPendingConfirmAction(null)}
+                    className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExecuteConfirmedAction}
+                    className={`px-5 py-2 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center space-x-1 ${
+                      pendingConfirmAction.type === 'approve'
+                        ? 'bg-emerald-600 hover:bg-emerald-700'
+                        : pendingConfirmAction.type === 'confirm_received_refund'
+                        ? 'bg-teal-600 hover:bg-teal-700'
+                        : 'bg-indigo-600 hover:bg-indigo-700'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>
+                      {pendingConfirmAction.type === 'approve' && '确认审核通过'}
+                      {pendingConfirmAction.type === 'confirm_received_refund' && '确认验货无误，立即退款'}
+                      {pendingConfirmAction.type === 'intervene_refund' && '确认平台强制退款'}
+                    </span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. 售后工单详情查看弹窗 Modal (点击详情查看凭据/图片/时间轴) */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+                  <Package className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    售后工单详情 · {getAfterSaleNo(selectedOrder)}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">关联订单号: {selectedOrder.orderNo}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* 售后状态与基础概况 */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 text-xs">
+              <div>
+                <span className="text-slate-400 block text-[11px]">当前状态</span>
+                <span className="font-bold text-slate-800">
+                  {selectedOrder.orderStatus === 'refunded' || selectedOrder.afterSale?.status === 'completed'
+                    ? '退款完成'
+                    : selectedOrder.afterSale?.status === 'rejected'
+                    ? '已驳回'
+                    : selectedOrder.afterSale?.status === 'customer_shipped'
+                    ? '买家已寄出待验货'
+                    : selectedOrder.afterSale?.status === 'waiting_customer_ship'
+                    ? '待买家寄回'
+                    : '待审核'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">售后类型</span>
+                <span className="font-bold text-slate-800">
+                  {getNormalizedType(selectedOrder) === 'return' ? '退货退款' : getNormalizedType(selectedOrder) === 'exchange' ? '换货' : '仅退款'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">实付款</span>
+                <span className="font-mono font-bold text-slate-800">¥{selectedOrder.payAmount.toFixed(2)}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[11px]">申请退款额</span>
+                <span className="font-mono font-black text-rose-600">
+                  ¥{(selectedOrder.afterSale?.refundAmount || selectedOrder.payAmount).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            {/* 商品信息列表 */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-800">涉及商品明细</h4>
+              <div className="space-y-2">
+                {selectedOrder.items?.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2.5 bg-slate-50/70 border border-slate-100 rounded-xl text-xs"
+                  >
+                    <div className="flex items-center space-x-3">
+                      {(item.image || item.imageSnapshot) && (
+                        <img
+                          src={item.image || item.imageSnapshot}
+                          alt=""
+                          className="w-10 h-10 rounded-lg object-cover border border-slate-200"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <div>
+                        <div className="font-bold text-slate-800">{item.name || item.titleSnapshot}</div>
+                        <div className="text-[11px] text-slate-400">
+                          {item.specTitle || item.skuName || '标准规格'} × {item.count || item.quantity || 1}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono font-bold text-slate-900">
+                        ¥{((item.price || item.unitPrice || 0) * (item.count || item.quantity || 1)).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 售后原因与证据图片 */}
+            <div className="bg-slate-50/70 p-3.5 rounded-2xl border border-slate-100 space-y-2 text-xs">
+              <div>
+                <span className="text-slate-400 block text-[11px]">退款申请原因</span>
+                <p className="text-slate-800 font-bold mt-0.5">
+                  {selectedOrder.afterSale?.reason || selectedOrder.aftersaleReason || '买家申请售后'}
+                </p>
+                {selectedOrder.afterSale?.description && (
+                  <p className="text-slate-600 text-[11px] mt-1 bg-white p-2 rounded-lg border border-slate-200/60">
+                    说明：{selectedOrder.afterSale.description}
+                  </p>
+                )}
+              </div>
+
+              {/* 买家凭证图片 */}
+              {selectedOrder.afterSale?.images && selectedOrder.afterSale.images.length > 0 && (
+                <div className="pt-2 border-t border-slate-200/60">
+                  <span className="text-slate-400 block text-[11px] mb-1.5">买家上传凭证图：</span>
+                  <div className="flex items-center space-x-2 flex-wrap gap-y-2">
+                    {selectedOrder.afterSale.images.map((img, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setPreviewImage(img)}
+                        className="relative group w-14 h-14 rounded-xl overflow-hidden border border-slate-200 cursor-zoom-in"
+                      >
+                        <img
+                          src={img}
+                          alt="凭证"
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-150"
+                          referrerPolicy="no-referrer"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 底部操作条 (详情内点击同样进入二次确认) */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <span className="text-[11px] text-slate-400">
+                申请时间: {selectedOrder.afterSale?.applyTime || selectedOrder.createTime}
+              </span>
+
+              <div className="flex items-center space-x-2">
+                {selectedOrder.afterSale?.status === 'pending' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => triggerRejectInput(selectedOrder)}
+                      className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/60 rounded-xl text-xs font-bold transition cursor-pointer"
+                    >
+                      驳回申请
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => triggerApprove(selectedOrder)}
+                      className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                    >
+                      审核通过
+                    </button>
+                  </>
+                )}
+
+                {selectedOrder.afterSale?.status === 'customer_shipped' && (
+                  <button
+                    type="button"
+                    onClick={() => triggerConfirmReceivedRefund(selectedOrder)}
+                    className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                  >
+                    验货并退款
+                  </button>
+                )}
+
+                {(selectedOrder.afterSale?.status === 'rejected' || selectedOrder.afterSale?.status === 'waiting_customer_ship') && onInterveneRefund && (
+                  <button
+                    type="button"
+                    onClick={() => triggerInterveneRefund(selectedOrder)}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                  >
+                    平台介入强制退款
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(null)}
+                  className="px-3.5 py-1.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                >
+                  关闭
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. 图片大图预览 Modal */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-60 bg-black/80 flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-2xl max-h-[85vh]">
+            <img
+              src={previewImage}
+              alt="大图"
+              className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
+              referrerPolicy="no-referrer"
+            />
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
       )}

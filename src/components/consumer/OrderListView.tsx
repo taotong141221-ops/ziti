@@ -574,7 +574,12 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
             ) : (
               filteredOrders.map((order) => {
                 const totalQty = order.items.reduce((sum, item) => sum + item.quantity, 0);
-                const discountVal = order.rebateDiscount || order.pointDeductAmount || 0;
+                const discountVal = order.rebateDiscount || order.pointDeductAmount || order.discountAmount || 0;
+                const calculatedPayAmount = Number(
+                  Math.max(0, (order.goodsAmount || 0) + (order.deliveryFee || 0) - discountVal).toFixed(2)
+                );
+                const actualPayAmount =
+                  discountVal > 0 ? calculatedPayAmount : (order.payAmount ?? calculatedPayAmount);
                 const isMultiItems = order.items.length > 1;
 
                 // 线下订单卡片 (与用户提供的参考图完全一致：门头方图 + 门店名称 + 时间 + 订单金额 + 优惠金额)
@@ -807,7 +812,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                           {order.payStatus === 0 ? '应付金额:' : '实付款:'}
                         </span>
                         <span className="font-black text-rose-600 text-sm font-mono">
-                          ¥{order.payAmount.toFixed(2)}
+                          ¥{actualPayAmount.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -1054,18 +1059,18 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                       ¥{itemsDetailOrder.goodsAmount.toFixed(2)}
                     </span>
                   </div>
-                  {(itemsDetailOrder.rebateDiscount || itemsDetailOrder.pointDeductAmount || 0) > 0 && (
+                  {((itemsDetailOrder.rebateDiscount || 0) > 0 || (itemsDetailOrder.pointDeductAmount || 0) > 0 || (itemsDetailOrder.discountAmount || 0) > 0) && (
                     <div className="flex justify-between text-amber-600">
                       <span>优惠立减</span>
                       <span className="font-mono font-bold">
-                        -¥{(itemsDetailOrder.rebateDiscount || itemsDetailOrder.pointDeductAmount || 0).toFixed(2)}
+                        -¥{(itemsDetailOrder.rebateDiscount || itemsDetailOrder.pointDeductAmount || itemsDetailOrder.discountAmount || 0).toFixed(2)}
                       </span>
                     </div>
                   )}
                   <div className="flex justify-between text-xs font-bold text-gray-900 pt-1 border-t border-gray-200/60">
                     <span>实付款</span>
                     <span className="font-mono font-black text-rose-600 text-sm">
-                      ¥{itemsDetailOrder.payAmount.toFixed(2)}
+                      ¥{Number(Math.max(0, (itemsDetailOrder.goodsAmount || 0) + (itemsDetailOrder.deliveryFee || 0) - (itemsDetailOrder.rebateDiscount || itemsDetailOrder.pointDeductAmount || itemsDetailOrder.discountAmount || 0)).toFixed(2)).toFixed(2)}
                     </span>
                   </div>
                 </div>

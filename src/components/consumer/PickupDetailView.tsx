@@ -407,14 +407,23 @@ export const PickupDetailView: React.FC<PickupDetailViewProps> = ({
               <span className="font-mono text-gray-900 font-bold">¥{order.goodsAmount.toFixed(2)}</span>
             </div>
 
-            {order.pointDeductAmount > 0 ? (
+            {((order.rebateDiscount || 0) > 0 || (order.discountAmount || 0) > 0) && (
+              <div className="flex justify-between items-center text-emerald-600">
+                <span>优惠立减</span>
+                <span className="font-mono font-bold">-¥{(order.rebateDiscount || order.discountAmount || 0).toFixed(2)}</span>
+              </div>
+            )}
+
+            {order.pointDeductAmount > 0 && (
               <div className="flex justify-between items-center text-rose-600">
                 <span>积分抵扣</span>
                 <span className="font-mono font-bold">-¥{order.pointDeductAmount.toFixed(2)}</span>
               </div>
-            ) : (
+            )}
+
+            {((order.rebateDiscount || 0) <= 0 && (order.discountAmount || 0) <= 0 && (order.pointDeductAmount || 0) <= 0) && (
               <div className="flex justify-between items-center text-gray-400">
-                <span>积分抵扣</span>
+                <span>优惠抵扣</span>
                 <span className="font-mono">¥0.00</span>
               </div>
             )}

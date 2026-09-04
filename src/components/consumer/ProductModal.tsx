@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, ShoppingBag, Plus, ShieldCheck, Truck, RefreshCw } from 'lucide-react';
+import { X, Check, ShoppingBag, Plus } from 'lucide-react';
 import { Product, ProductSKU } from '../../types';
 
 interface ProductModalProps {
@@ -70,22 +70,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             </div>
             <h2 className="text-sm font-black text-gray-900 mt-1">{product.title}</h2>
             <p className="text-xs text-gray-500 mt-0.5">{product.subtitle}</p>
-          </div>
-
-          {/* Guarantee Badges */}
-          <div className="flex items-center space-x-3 text-[10px] text-gray-500 bg-gray-50 p-2 rounded-xl">
-            <span className="flex items-center space-x-1 text-emerald-700 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>现货正品</span>
-            </span>
-            <span className="flex items-center space-x-1 text-emerald-700 font-medium">
-              <Truck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>现货速提</span>
-            </span>
-            <span className="flex items-center space-x-1 text-emerald-700 font-medium">
-              <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
-              <span>坏果包赔</span>
-            </span>
           </div>
 
           {/* SKU Specifications */}

@@ -63,6 +63,7 @@ export interface MerchantOrderItem {
   refundTime?: string;
   isToday?: boolean;
   isUnpaid?: boolean; // 是否未付款 (消费者发起订单未付款)
+  printCount?: number; // 小票打印次数
   originalPayAmount?: number; // 商家改价前原需付金额
   isPriceModified?: boolean; // 商家是否已修改价格
   priceModifyReason?: string; // 改价原因/备注
@@ -119,7 +120,7 @@ const DEFAULT_ORDERS: MerchantOrderItem[] = [
     time: '2026-08-27 19:42:10',
     pickupTime: '2026-08-27 20:30:00',
     orderAmount: 58.0,
-    payAmount: 58.0,
+    payAmount: 52.2,
     rebateDiscount: 5.8,
     deductedAmount: 0.0,
     fulfillType: 'pickup',
@@ -161,7 +162,7 @@ const DEFAULT_ORDERS: MerchantOrderItem[] = [
     time: '2026-08-27 19:15:22',
     pickupTime: '2026-08-27 20:00:00',
     orderAmount: 38.0,
-    payAmount: 38.0,
+    payAmount: 34.2,
     rebateDiscount: 3.8,
     deductedAmount: 0.0,
     fulfillType: 'pickup',
@@ -266,6 +267,7 @@ const DEFAULT_ORDERS: MerchantOrderItem[] = [
     pickupCode: '784912',
     isRefunded: false,
     isToday: true,
+    printCount: 1,
     items: [
       {
         title: '老街坊秘制红烧牛肉面',
@@ -1105,19 +1107,21 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
                 {/* Bottom Action Buttons: 打印小票 | 修改价格 (未付款) | 已备货 / 核销 | 线下退款 */}
                 <div className="border-t border-gray-50 pt-2 flex items-center justify-between flex-wrap gap-1.5">
                   <div className="flex items-center space-x-1.5">
-                    {/* 打印小票 Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPrintReceiptOrder(order);
-                      }}
-                      className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold flex items-center space-x-1 transition cursor-pointer"
-                      id={`btn-print-receipt-${order.orderNo}`}
-                    >
-                      <Printer className="w-3 h-3 text-gray-600" />
-                      <span>打印小票</span>
-                    </button>
+                    {/* 打印小票 Button (待付款与已退款状态去掉打印小票按钮) */}
+                    {!(order.isUnpaid || order.statusText === '待付款' || order.isRefunded || order.statusText === '已退款') && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPrintReceiptOrder(order);
+                        }}
+                        className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold flex items-center space-x-1 transition cursor-pointer"
+                        id={`btn-print-receipt-${order.orderNo}`}
+                      >
+                        <Printer className="w-3 h-3 text-gray-600" />
+                        <span>打印小票</span>
+                      </button>
+                    )}
                   </div>
 
                   <div className="flex items-center space-x-1.5">
@@ -1260,6 +1264,11 @@ export const MerchantOrdersView: React.FC<MerchantOrdersViewProps> = ({
             order={printReceiptOrder}
             onClose={() => setPrintReceiptOrder(null)}
             onShowToast={showToast}
+            onPrintSuccess={(orderNo, newCount) => {
+              setOrders((prev) =>
+                prev.map((o) => (o.orderNo === orderNo ? { ...o, printCount: newCount } : o))
+              );
+            }}
           />
         )}
       </AnimatePresence>

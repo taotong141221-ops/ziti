@@ -3,28 +3,44 @@ import { X, Printer } from 'lucide-react';
 import { motion } from 'motion/react';
 import { MerchantOrderItem, formatPickupTimePoint } from './MerchantOrdersView';
 import { playChime } from '../../utils/audio';
+import { getReceiptPrintCount, incrementReceiptPrintCount } from '../../utils/receiptPrinter';
 
 interface ThermalReceiptModalProps {
   order: MerchantOrderItem | null;
   onClose: () => void;
   onShowToast: (msg: string) => void;
+  onPrintSuccess?: (orderNo: string, newCount: number) => void;
 }
 
 export const ThermalReceiptModal: React.FC<ThermalReceiptModalProps> = ({
   order,
   onClose,
   onShowToast,
+  onPrintSuccess,
 }) => {
   const [isPrinting, setIsPrinting] = useState(false);
+  const initialPrintCount = order ? (getReceiptPrintCount(order.orderNo) || (order.printCount ?? 0)) : 0;
+  const [currentPrintCount, setCurrentPrintCount] = useState<number>(initialPrintCount);
 
   if (!order) return null;
+
+  const isReprint = currentPrintCount > 0;
 
   const handleExecutePrint = () => {
     setIsPrinting(true);
     playChime();
+    const newCount = incrementReceiptPrintCount(order.orderNo);
+    setCurrentPrintCount(newCount);
+    if (onPrintSuccess) {
+      onPrintSuccess(order.orderNo, newCount);
+    }
     setTimeout(() => {
       setIsPrinting(false);
-      onShowToast(`已发送订单 ${order.orderNo} 打印任务至热敏打印机`);
+      if (isReprint) {
+        onShowToast(`提醒：该小票已打印 ${currentPrintCount} 次！已发送第 ${newCount} 次重打小票至热敏打印机`);
+      } else {
+        onShowToast(`已发送订单 ${order.orderNo} 打印任务至热敏打印机`);
+      }
       onClose();
     }, 1200);
   };
@@ -35,7 +51,7 @@ export const ThermalReceiptModal: React.FC<ThermalReceiptModalProps> = ({
         initial={{ scale: 0.92, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.92, opacity: 0, y: 10 }}
-        className="bg-white rounded-3xl p-5 max-w-xs w-full shadow-2xl space-y-3 font-mono my-auto max-h-[90vh] overflow-y-auto no-scrollbar"
+        className="bg-white rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-3 font-mono my-auto max-h-[90vh] overflow-y-auto no-scrollbar"
       >
         {/* Receipt Header Actions */}
         <div className="flex items-center justify-between pb-1 border-b border-gray-100 font-sans">
@@ -60,6 +76,14 @@ export const ThermalReceiptModal: React.FC<ThermalReceiptModalProps> = ({
           <div className="text-center text-xs font-black">
             老街坊正宗牛肉面 (红谷滩店)
           </div>
+
+          {/* 小票二次打印提醒 */}
+          {isReprint && (
+            <div className="text-center font-black text-xs text-rose-600 py-1 my-1 border-y border-dashed border-rose-300 bg-rose-50/50">
+              ⚠️ 提醒：该小票已打印 {currentPrintCount} 次！
+            </div>
+          )}
+
           <div className="border-t border-dashed border-gray-300 my-1" />
 
           <div className="space-y-0.5 text-[11px] text-gray-600">
@@ -224,7 +248,7 @@ export const ThermalReceiptModal: React.FC<ThermalReceiptModalProps> = ({
             type="button"
             disabled={isPrinting}
             onClick={handleExecutePrint}
-            className="flex-1 py-2 bg-[#00B578] hover:bg-[#009e68] text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center space-x-1 cursor-pointer"
+            className="flex-1 py-2 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center space-x-1 cursor-pointer transition bg-[#00B578] hover:bg-[#009e68]"
           >
             {isPrinting ? (
               <>

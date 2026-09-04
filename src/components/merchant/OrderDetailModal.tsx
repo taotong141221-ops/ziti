@@ -308,17 +308,25 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="pt-2 flex items-center space-x-2">
-          <button
-            type="button"
-            onClick={() => onPrintReceipt(order)}
-            className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs flex items-center justify-center space-x-1 transition cursor-pointer"
-          >
-            <Printer className="w-3.5 h-3.5 text-gray-600" />
-            <span>打印小票</span>
-          </button>
+        {(() => {
+          const isUnpaid = Boolean(order.isUnpaid || order.statusText === '待付款');
+          const isRefunded = Boolean(order.isRefunded || order.statusText === '已退款');
 
-          {(order.isUnpaid || order.statusText === '待付款') ? (
+          return (
+            <div className="pt-2 flex items-center space-x-2">
+              {/* 待付款状态与已退款状态去掉打印小票按钮 */}
+              {!isUnpaid && !isRefunded && (
+                <button
+                  type="button"
+                  onClick={() => onPrintReceipt(order)}
+                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs flex items-center justify-center space-x-1 transition cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5 text-gray-600" />
+                  <span>打印小票</span>
+                </button>
+              )}
+
+              {isUnpaid ? (
             <button
               type="button"
               onClick={() => {
@@ -364,6 +372,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             </button>
           )}
         </div>
+          );
+        })()}
       </motion.div>
     </div>
   );
