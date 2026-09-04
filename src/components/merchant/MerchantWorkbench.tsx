@@ -20,6 +20,7 @@ import {
   Printer,
   Tag,
   MapPin,
+  ScanLine,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MerchantConfig, Order, Product } from '../../types';
@@ -515,17 +516,34 @@ export const MerchantWorkbench: React.FC<MerchantWorkbenchProps> = ({
                   请输入6位/8位提货码或扫描核销码
                 </label>
                 <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    value={inputCode}
-                    onChange={(e) => {
-                      setInputCode(e.target.value.toUpperCase());
-                      setLookupInfo(null);
-                      setVerifySuccessMessage(null);
-                    }}
-                    placeholder="例如: 784912"
-                    className="flex-1 text-center tracking-widest font-mono text-base font-black py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#00B578] text-gray-900"
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={inputCode}
+                      onChange={(e) => {
+                        setInputCode(e.target.value.toUpperCase());
+                        setLookupInfo(null);
+                        setVerifySuccessMessage(null);
+                      }}
+                      placeholder="例如: 784912"
+                      className="w-full text-center tracking-widest font-mono text-base font-black py-2.5 pl-3 pr-10 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#00B578] text-gray-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const sampleCodes = ['784912', '1000111', '668899'];
+                        const picked = sampleCodes[Math.floor(Math.random() * sampleCodes.length)];
+                        setInputCode(picked);
+                        showToast('已模拟扫码识别核销码：' + picked);
+                        playChime();
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-[#00B578] hover:bg-emerald-50 rounded-lg transition cursor-pointer"
+                      title="扫一扫核销码"
+                      id="btn-scan-verify-code"
+                    >
+                      <ScanLine className="w-4 h-4 text-[#00B578]" />
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={handleLookupCode}

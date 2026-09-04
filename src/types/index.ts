@@ -126,6 +126,7 @@ export interface OrderItem {
   itemAmount?: number;
   subtotal?: number;
   pointAwarded?: number;
+  isRefrigerated?: boolean;
 }
 
 export interface OrderFulfillment {

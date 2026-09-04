@@ -10,6 +10,7 @@ import {
   X,
   Edit2,
   Navigation,
+  AlertCircle,
 } from 'lucide-react';
 import { MerchantConfig, CartItem, Order, DeliveryAddressItem } from '../../types';
 
@@ -535,10 +536,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
             <span className="font-mono text-gray-700">{previewOrderNo}</span>
           </div>
           <div className="flex items-center justify-between text-xs text-gray-800 font-bold">
-            <span>商品总额</span>
-            <span className="font-mono font-bold">¥ {totalGoodsAmount.toFixed(2)}</span>
-          </div>
-          <div className="flex items-center justify-between text-xs text-gray-800 font-bold">
             <span>订单总金额</span>
             <span className="font-mono font-bold">¥ {totalGoodsAmount.toFixed(2)}</span>
           </div>
@@ -556,55 +553,17 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
           </div>
         </div>
 
-        {/* 5. 支付方式 Card (Exact match Image 1) */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-2xs space-y-2.5">
-          <div className="flex items-center justify-between pb-1">
-            <h4 className="text-xs font-black text-gray-900">支付方式</h4>
-            <span className="text-[11px] text-emerald-700 font-medium">社区购快捷安全支付</span>
-          </div>
-
-          {/* 微信支付 (推荐) */}
-          <div
-            onClick={() => setPaymentMethod('wechat')}
-            className={`p-2.5 rounded-xl border flex items-center justify-between transition cursor-pointer ${
-              paymentMethod === 'wechat'
-                ? 'border-emerald-500 bg-emerald-50/20'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center space-x-2.5">
-              <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                微
-              </div>
-              <span className="text-xs font-bold text-gray-900">微信支付 (推荐)</span>
+        {/* 超时退款扣除服务费提醒 */}
+        <div className="bg-amber-50/80 rounded-2xl p-3.5 border border-amber-200/80 flex items-start space-x-2.5 text-xs">
+          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1 text-amber-900 leading-relaxed">
+            <div className="font-black text-amber-950 flex items-center space-x-1.5">
+              <span>超时退款与自提须知</span>
+              <span className="text-[10px] bg-amber-200/80 text-amber-900 px-1.5 py-0.2 rounded font-bold">温馨提醒</span>
             </div>
-            {paymentMethod === 'wechat' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            ) : (
-              <div className="w-4 h-4 rounded-full border border-gray-300" />
-            )}
-          </div>
-
-          {/* 支付宝支付 */}
-          <div
-            onClick={() => setPaymentMethod('alipay')}
-            className={`p-2.5 rounded-xl border flex items-center justify-between transition cursor-pointer ${
-              paymentMethod === 'alipay'
-                ? 'border-emerald-500 bg-emerald-50/20'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center space-x-2.5">
-              <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                支
-              </div>
-              <span className="text-xs font-bold text-gray-900">支付宝支付</span>
-            </div>
-            {paymentMethod === 'alipay' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            ) : (
-              <div className="w-4 h-4 rounded-full border border-gray-300" />
-            )}
+            <p className="text-[11px] text-amber-800/90 leading-snug">
+              请在约定自提时间内凭提货码到店核销。若超过自提截止时间未提货导致系统自动发起退款，将扣除相应备货保鲜服务费，剩余金额原路返还。
+            </p>
           </div>
         </div>
 

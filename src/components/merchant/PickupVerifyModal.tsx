@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, ShieldCheck, KeyRound, AlertCircle, ShoppingBag, Phone } from 'lucide-react';
+import { X, CheckCircle2, ShieldCheck, KeyRound, AlertCircle, ShoppingBag, Phone, ScanLine } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MerchantOrderItem, formatPickupTimePoint } from './MerchantOrdersView';
 
@@ -115,12 +115,20 @@ export const PickupVerifyModal: React.FC<PickupVerifyModalProps> = ({
                 if (errorMsg) setErrorMsg(null);
               }}
               placeholder="请输入6位数字提货码"
-              className="w-full text-center text-2xl font-mono tracking-widest font-black py-3 px-4 rounded-2xl border-2 border-emerald-200 focus:border-emerald-500 focus:outline-none bg-gray-50/50 text-gray-900 transition placeholder:text-gray-300 placeholder:text-sm placeholder:tracking-normal placeholder:font-normal"
+              className="w-full text-center text-2xl font-mono tracking-widest font-black py-3 pl-4 pr-12 rounded-2xl border-2 border-emerald-200 focus:border-emerald-500 focus:outline-none bg-gray-50/50 text-gray-900 transition placeholder:text-gray-300 placeholder:text-sm placeholder:tracking-normal placeholder:font-normal"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleVerify();
               }}
             />
+            <button
+              type="button"
+              onClick={handleQuickFill}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-[#00B578] hover:bg-emerald-50 rounded-xl transition cursor-pointer"
+              title="扫一扫顾客核销码"
+            >
+              <ScanLine className="w-5 h-5 text-[#00B578]" />
+            </button>
           </div>
 
           {errorMsg && (

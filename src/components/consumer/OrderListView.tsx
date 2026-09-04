@@ -13,6 +13,8 @@ import {
   AlertTriangle,
   Calendar,
   ChevronDown,
+  ChevronRight,
+  X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Order } from '../../types';
@@ -78,6 +80,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
   const [activeTab, setActiveTab] = useState<OrderFilterTab>(initialTab);
   const [slideDirection, setSlideDirection] = useState<number>(0);
   const [returnGoodsModalOrder, setReturnGoodsModalOrder] = useState<Order | null>(null);
+  const [itemsDetailOrder, setItemsDetailOrder] = useState<Order | null>(null);
 
   // 渠道筛选 (全部 / 线上 / 线下)
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
@@ -572,6 +575,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
               filteredOrders.map((order) => {
                 const totalQty = order.items.reduce((sum, item) => sum + item.quantity, 0);
                 const discountVal = order.rebateDiscount || order.pointDeductAmount || 0;
+                const isMultiItems = order.items.length > 1;
 
                 // 线下订单卡片 (与用户提供的参考图完全一致：门头方图 + 门店名称 + 时间 + 订单金额 + 优惠金额)
                 if (order.channel === 'offline') {
@@ -582,7 +586,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                       className="bg-white rounded-2xl p-4 border border-gray-100 shadow-2xs hover:shadow-md transition cursor-pointer space-y-3"
                       id={`order-card-offline-${order.orderNo}`}
                     >
-                      {/* 顶部：门头方图 + 门店名称 + 交易时间点 */}
+                      {/* 顶部：门头方图 + 门店名称 + 线下标签 + 交易时间点 */}
                       <div className="flex items-center space-x-3.5">
                         <img
                           src={
@@ -594,9 +598,14 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                           referrerPolicy="no-referrer"
                         />
                         <div className="min-w-0 flex-1">
-                          <h3 className="text-base font-black text-gray-900 truncate">
-                            {order.merchantName}
-                          </h3>
+                          <div className="flex items-center space-x-2">
+                            <h3 className="text-base font-black text-gray-900 truncate">
+                              {order.merchantName}
+                            </h3>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded font-bold shrink-0 bg-purple-50 text-purple-700 border border-purple-200/70">
+                              线下
+                            </span>
+                          </div>
                           <div className="text-xs text-gray-400 font-mono mt-1">
                             {order.createTime || '2026-05-22 01:38:56'}
                           </div>
@@ -625,7 +634,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                   );
                 }
 
-                // 线上订单卡片 (包含时间点自提、商品列表、状态徽章与操作按钮)
+                // 线上订单卡片 (单一商品保留原有完整展示，多种类商品使用新版缩略图+明细弹窗排版)
                 return (
                   <div
                     key={order.orderNo}
@@ -633,7 +642,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                     className="bg-white rounded-2xl p-4 border border-gray-100/90 shadow-2xs hover:shadow-md transition cursor-pointer space-y-3"
                     id={`order-card-${order.orderNo}`}
                   >
-                    {/* Header: Merchant info with door image */}
+                    {/* Header: 门头图、门店名称、线上/线下标签以及状态徽章 */}
                     <div className="flex items-center justify-between pb-2.5 border-b border-gray-50">
                       <div className="flex items-center space-x-2 min-w-0 pr-2">
                         {order.merchantDoorImage ? (
@@ -657,7 +666,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                               className={`text-[9px] px-1.5 py-0.2 rounded font-bold shrink-0 ${
                                 order.channel === 'offline'
                                   ? 'bg-purple-50 text-purple-700 border border-purple-200/70'
-                                  : 'bg-blue-50 text-blue-700 border border-blue-200/70'
+                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200/70'
                               }`}
                             >
                               {order.channel === 'offline' ? '线下' : '线上'}
@@ -685,37 +694,104 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                       </div>
                     )}
 
-                    {/* Items List */}
-                    <div className="space-y-2.5">
-                      {order.items.map((item) => (
-                        <div key={item.skuId} className="flex space-x-3">
-                          <img
-                            src={item.imageSnapshot}
-                            alt={item.titleSnapshot}
-                            className="w-13 h-13 rounded-xl object-cover bg-gray-50 shrink-0 border border-gray-100"
-                            referrerPolicy="no-referrer"
-                          />
-                          <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                            <div className="text-xs font-bold text-gray-800 truncate">
-                              {item.titleSnapshot}
-                            </div>
-                            <div className="text-[10px] text-gray-400 truncate">
-                              {item.specSnapshot}
-                            </div>
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="font-bold text-gray-800">
-                                ¥{item.priceSnapshot.toFixed(2)}
+                    {/* 商品展示: 多种类商品使用横排缩略图+共X件；单一商品保留原有完整卡片 */}
+                    {isMultiItems ? (
+                      <div className="flex items-center justify-between py-1">
+                        {/* 左侧商品缩略图列表 */}
+                        <div
+                          className="flex items-center space-x-2.5 overflow-x-auto no-scrollbar py-0.5 flex-1 min-w-0 pr-2 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setItemsDetailOrder(order);
+                          }}
+                        >
+                          {order.items.map((item, idx) => (
+                            <div
+                              key={item.skuId || idx}
+                              className="w-16 h-16 rounded-xl bg-gray-50 border border-gray-100 shadow-2xs relative shrink-0 overflow-hidden"
+                            >
+                              <img
+                                src={item.imageSnapshot}
+                                alt={item.titleSnapshot}
+                                className="w-full h-full object-cover"
+                                referrerPolicy="no-referrer"
+                              />
+                              {/* 数量角标 (参考图2/图3) */}
+                              <span className="absolute bottom-1 right-1 bg-white/95 text-rose-500 font-black text-[10px] px-1.5 py-0.2 rounded-full shadow-2xs border border-gray-100/90 leading-none">
+                                x{item.quantity}
                               </span>
-                              <span className="text-gray-400 font-medium">x{item.quantity}</span>
+                              {/* 冷藏角标 (参考图2) */}
+                              {(item.isRefrigerated ||
+                                item.titleSnapshot.includes('酸奶') ||
+                                item.titleSnapshot.includes('牛奶') ||
+                                item.titleSnapshot.includes('冷藏')) && (
+                                <span className="absolute top-1 right-1 bg-blue-500 text-white font-bold text-[8px] px-1 py-0.2 rounded leading-none shadow-2xs">
+                                  冷藏
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* 右侧点击共X件查看全部商品明细 */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setItemsDetailOrder(order);
+                          }}
+                          className="shrink-0 pl-3 border-l border-gray-100 flex items-center space-x-0.5 text-gray-500 hover:text-emerald-600 transition cursor-pointer group py-2"
+                          title="点击查看全部商品明细"
+                          id={`btn-view-items-detail-${order.orderNo}`}
+                        >
+                          <span className="text-xs font-bold text-gray-700 group-hover:text-emerald-600">
+                            共{totalQty}件
+                          </span>
+                          <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {order.items.map((item) => (
+                          <div key={item.skuId} className="flex space-x-3">
+                            <div className="relative shrink-0">
+                              <img
+                                src={item.imageSnapshot}
+                                alt={item.titleSnapshot}
+                                className="w-13 h-13 rounded-xl object-cover bg-gray-50 shrink-0 border border-gray-100"
+                                referrerPolicy="no-referrer"
+                              />
+                              {(item.isRefrigerated ||
+                                item.titleSnapshot.includes('酸奶') ||
+                                item.titleSnapshot.includes('牛奶') ||
+                                item.titleSnapshot.includes('冷藏')) && (
+                                <span className="absolute top-1 right-1 bg-blue-500 text-white font-bold text-[8px] px-1 py-0.2 rounded leading-none">
+                                  冷藏
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                              <div className="text-xs font-bold text-gray-800 truncate">
+                                {item.titleSnapshot}
+                              </div>
+                              <div className="text-[10px] text-gray-400 truncate">
+                                {item.specSnapshot}
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="font-bold text-gray-800 font-mono">
+                                  ¥{item.priceSnapshot.toFixed(2)}
+                                </span>
+                                <span className="text-gray-400 font-medium">x{item.quantity}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
 
-                    {/* 财务与金额明细 (严格符合用户图2规范) */}
-                    <div className="flex flex-wrap items-center justify-between pt-2 border-t border-gray-50 text-xs gap-y-1">
-                      <div className="flex items-center space-x-3 text-[11px] text-gray-500">
+                    {/* 订单金额与实付款 */}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-50 text-xs">
+                      <div className="flex items-center space-x-2 text-[11px] text-gray-500">
                         <span>
                           订单金额: <strong className="text-gray-800 font-bold">¥{order.goodsAmount.toFixed(2)}</strong>
                         </span>
@@ -730,7 +806,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
                         <span className="text-gray-500 text-[11px]">
                           {order.payStatus === 0 ? '应付金额:' : '实付款:'}
                         </span>
-                        <span className="font-black text-rose-600 text-sm">
+                        <span className="font-black text-rose-600 text-sm font-mono">
                           ¥{order.payAmount.toFixed(2)}
                         </span>
                       </div>
@@ -883,6 +959,129 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
           }
         }}
       />
+
+      {/* 全部商品明细弹窗 (参考图2、图3规范，点击右边共X件弹窗展示全部商品明细) */}
+      <AnimatePresence>
+        {itemsDetailOrder && (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4"
+            onClick={() => setItemsDetailOrder(null)}
+          >
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 280 }}
+              className="bg-white rounded-t-3xl sm:rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 弹窗头部 */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+                <div>
+                  <h3 className="text-base font-black text-gray-900">
+                    全部商品明细
+                  </h3>
+                  <p className="text-[11px] text-gray-400 font-mono mt-0.5">
+                    订单号: {itemsDetailOrder.orderNo} · 共 {itemsDetailOrder.items.reduce((s, i) => s + i.quantity, 0)} 件
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setItemsDetailOrder(null)}
+                  className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition cursor-pointer"
+                  id="btn-close-items-detail-modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* 弹窗商品列表 */}
+              <div className="p-4 space-y-3 overflow-y-auto flex-1 no-scrollbar divide-y divide-gray-50">
+                {itemsDetailOrder.items.map((item, index) => (
+                  <div key={item.skuId || index} className="pt-3 first:pt-0 flex space-x-3">
+                    <div className="relative shrink-0">
+                      <img
+                        src={item.imageSnapshot}
+                        alt={item.titleSnapshot}
+                        className="w-16 h-16 rounded-xl object-cover bg-gray-50 border border-gray-100"
+                        referrerPolicy="no-referrer"
+                      />
+                      {(item.isRefrigerated ||
+                        item.titleSnapshot.includes('酸奶') ||
+                        item.titleSnapshot.includes('牛奶') ||
+                        item.titleSnapshot.includes('冷藏')) && (
+                        <span className="absolute top-1 right-1 bg-blue-500 text-white font-bold text-[8px] px-1 py-0.2 rounded leading-none">
+                          冷藏
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                      <div>
+                        <h4 className="text-xs font-black text-gray-900 leading-snug line-clamp-2">
+                          {item.titleSnapshot}
+                        </h4>
+                        {item.specSnapshot && (
+                          <span className="inline-block text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded mt-1">
+                            {item.specSnapshot}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between pt-1 text-xs">
+                        <span className="font-bold text-rose-600 font-mono">
+                          ¥{item.priceSnapshot.toFixed(2)}
+                        </span>
+                        <span className="text-gray-500 text-xs font-bold font-mono">
+                          x{item.quantity}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 弹窗金额明细与操作 */}
+              <div className="p-4 bg-gray-50/80 border-t border-gray-100 space-y-3 shrink-0">
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between text-gray-500">
+                    <span>商品件数</span>
+                    <span className="font-bold text-gray-800">
+                      共 {itemsDetailOrder.items.reduce((s, i) => s + i.quantity, 0)} 件
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-gray-500">
+                    <span>商品总额</span>
+                    <span className="font-mono text-gray-800">
+                      ¥{itemsDetailOrder.goodsAmount.toFixed(2)}
+                    </span>
+                  </div>
+                  {(itemsDetailOrder.rebateDiscount || itemsDetailOrder.pointDeductAmount || 0) > 0 && (
+                    <div className="flex justify-between text-amber-600">
+                      <span>优惠立减</span>
+                      <span className="font-mono font-bold">
+                        -¥{(itemsDetailOrder.rebateDiscount || itemsDetailOrder.pointDeductAmount || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs font-bold text-gray-900 pt-1 border-t border-gray-200/60">
+                    <span>实付款</span>
+                    <span className="font-mono font-black text-rose-600 text-sm">
+                      ¥{itemsDetailOrder.payAmount.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setItemsDetailOrder(null)}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-black shadow-xs transition cursor-pointer"
+                >
+                  我知道了
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

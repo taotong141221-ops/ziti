@@ -27,7 +27,6 @@ import {
   Plus,
   Gift,
   Percent,
-  Timer,
   Navigation,
   ShieldAlert,
   HelpCircle,
@@ -332,66 +331,12 @@ export const MerchantProfileView: React.FC<MerchantProfileViewProps> = ({
               </div>
             </div>
 
-            {/* 规则三：自提凭证与有效期规则 (原规则二，已移除灰色提示框) */}
-            <div className="bg-white rounded-2xl p-4 shadow-2xs border border-gray-100/90 space-y-3">
-              <div className="flex items-center justify-between border-b border-gray-50 pb-2">
-                <div className="flex items-center space-x-1.5">
-                  <Timer className="w-4 h-4 text-[#00B578]" />
-                  <span className="text-xs font-black text-gray-900">规则三：自提凭证与时效规则</span>
-                </div>
-                <span className="text-[10px] text-gray-500 font-mono">6位核销凭证</span>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-gray-700">
-                  自提凭证有效期说明 <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={pickupExpiryDesc}
-                  onChange={(e) => setPickupExpiryDesc(e.target.value)}
-                  placeholder="如: 下单后48小时内有效"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-[#00B578] font-bold text-gray-900"
-                />
-              </div>
-
-              {/* 快捷时效预设 */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] text-gray-400 block">常用时效预设:</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { desc: '下单当日营业结束前有效', hours: 16 },
-                    { desc: '下单后24小时内有效', hours: 24 },
-                    { desc: '下单后48小时内有效', hours: 48 },
-                    { desc: '下单后72小时内有效', hours: 72 },
-                  ].map((preset) => (
-                    <button
-                      key={preset.desc}
-                      type="button"
-                      onClick={() => {
-                        setPickupExpiryDesc(preset.desc);
-                        setPickupExpiryHours(preset.hours);
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition cursor-pointer ${
-                        pickupExpiryDesc === preset.desc
-                          ? 'bg-[#00B578] text-white font-bold'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }`}
-                    >
-                      {preset.desc}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 规则四：超时未提与售后退款规则 (原规则三，已移除黄绿卡片与试算示例) */}
+            {/* 规则三：超时未提与售后退款规则 */}
             <div className="bg-white rounded-2xl p-4 shadow-2xs border border-amber-200/70 space-y-3">
               <div className="flex items-center justify-between border-b border-gray-50 pb-2">
                 <div className="flex items-center space-x-1.5">
                   <Percent className="w-4 h-4 text-amber-500" />
-                  <span className="text-xs font-black text-gray-900">规则四：超时未提与售后退款规则</span>
+                  <span className="text-xs font-black text-gray-900">规则三：超时未提与售后退款规则</span>
                 </div>
                 <span className="text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded">
                   服务费扣除配置
